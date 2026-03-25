@@ -30,7 +30,7 @@ jobs:
 
       - name: Build Linux executable
         run: |
-          pyinstaller --onefile --name CHIM_Installer --add-data "7zzs:." --windowed chim_installer.py
+          pyinstaller --onefile --name CHIM_Installer --add-data "7zzs:." --add-data "deck_engine.ini:." --add-data "deck_gameusersettings.ini:." --windowed chim_installer.py
 
       - name: Create Linux tarball
         run: |
@@ -64,7 +64,7 @@ jobs:
 
       - name: Build Windows executable
         run: |
-          pyinstaller --onefile --name CHIM_Installer --add-data "7za.exe;." --windowed --icon=NONE chim_installer.py
+          pyinstaller --onefile --name CHIM_Installer --add-data "7za.exe;." --add-data "deck_engine.ini;." --add-data "deck_gameusersettings.ini;." --windowed --icon=NONE chim_installer.py
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
