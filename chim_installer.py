@@ -98,10 +98,13 @@ MODS = [
 # ─── Deck Optimization Mods (replaces visual mods on Steam Deck) ─────────────
 
 DECK_OPTIMIZATION_MODS = [
-    {"name": "Ultimate Engine Tweaks", "nexus_id": 35, "type": "config", "category": "Deck Optimization"},
     {"name": "LUMEN BEGONE", "nexus_id": 183, "type": "pak", "category": "Deck Optimization"},
     {"name": "No More VRAM Leaks", "nexus_id": 399, "type": "ue4ss", "category": "Deck Optimization"},
     {"name": "4GB GPU Optimization", "nexus_id": 245, "type": "config", "category": "Deck Optimization"},
+    {"name": "Optimax (4GB Low Preset)", "nexus_id": 488, "type": "config", "category": "Deck Optimization"},
+    {"name": "Oblivion Optimizer", "nexus_id": 39, "type": "config", "category": "Deck Optimization"},
+    {"name": "Actual Stuttering Fix", "nexus_id": 1776, "type": "config", "category": "Deck Optimization"},
+    {"name": "Simply No Fog", "nexus_id": 1429, "type": "pak", "category": "Deck Optimization"},
 ]
 
 # Nexus IDs to EXCLUDE on Steam Deck (heavy visual mods that tank performance)
@@ -527,6 +530,32 @@ def classify_and_install_files(
         enabled = mod_dir / "enabled.txt"
         if not enabled.exists():
             enabled.write_text("1\n")
+
+    elif mod_type == "config":
+        # Config/optimization mods — ini files go to various locations
+        for f in all_files:
+            ext = f.suffix.lower()
+            name_lower = f.name.lower()
+            if ext == ".ini":
+                if "engine" in name_lower:
+                    # Engine.ini goes to saved config dir (handled separately for Deck)
+                    dest = bin_dir / f.name
+                elif "gameusersettings" in name_lower:
+                    dest = bin_dir / f.name
+                else:
+                    dest = bin_dir / f.name
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(f, dest)
+                installed += 1
+            elif ext in (".pak", ".ucas", ".utoc"):
+                dest = paks_dir / f.name
+                shutil.copy2(f, dest)
+                installed += 1
+            elif ext in (".cfg", ".txt", ".json"):
+                dest = bin_dir / f.name
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(f, dest)
+                installed += 1
 
     if installed == 0:
         errors.append(f"No recognized files found in archive for {mod_name}")
@@ -1640,6 +1669,32 @@ class CHIMInstaller:
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
         self._log("")
+        # Deploy CHIM Deck custom configs if Deck profile
+        if self.profile == PROFILE_DECK and not self.dry_run:
+            self._log("")
+            self._log("Deploying CHIM Deck optimized configs...", "gold")
+            config_dir = self._find_saved_config_dir(game_path)
+            if config_dir:
+                for ini_name, bundled_name in [("Engine.ini", "deck_engine.ini"), ("GameUserSettings.ini", "deck_gameusersettings.ini")]:
+                    src = self._find_bundled_file(bundled_name)
+                    if src and src.is_file():
+                        dest = config_dir / ini_name
+                        # Backup existing
+                        if dest.exists():
+                            backup = dest.with_suffix(f".ini.backup_chim")
+                            shutil.copy2(dest, backup)
+                            self._log(f"  Backed up {ini_name} → {backup.name}", "dim")
+                        shutil.copy2(src, dest)
+                        # Make read-only so game can't overwrite
+                        dest.chmod(0o444)
+                        self._log(f"  Installed {ini_name} (read-only)", "green")
+                    else:
+                        self._log(f"  {bundled_name} not found in installer bundle", "red")
+                        errors_total.append(f"Missing bundled config: {bundled_name}")
+            else:
+                self._log("  Could not find saved config directory — deploy configs manually", "red")
+                errors_total.append("Config directory not found")
+
         if errors_total:
             self._log(f"Completed with {len(errors_total)} warning(s).", "gold")
         else:
@@ -1649,6 +1704,30 @@ class CHIMInstaller:
 
         # Show Done button
         self.root.after(500, self._add_done_button)
+
+    def _find_saved_config_dir(self, game_path: Path) -> Optional[Path]:
+        """Find the Proton/Wine saved config directory for Oblivion Remastered."""
+        # Standard Proton compatdata path
+        candidates = [
+            Path.home() / ".local/share/Steam/steamapps/compatdata/2623190/pfx/drive_c/users/steamuser/Documents/My Games/Oblivion Remastered/Saved/Config/Windows",
+            Path("/home/deck/.local/share/Steam/steamapps/compatdata/2623190/pfx/drive_c/users/steamuser/Documents/My Games/Oblivion Remastered/Saved/Config/Windows"),
+            Path.home() / ".var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/compatdata/2623190/pfx/drive_c/users/steamuser/Documents/My Games/Oblivion Remastered/Saved/Config/Windows",
+        ]
+        for c in candidates:
+            if c.is_dir():
+                return c
+        # Try to find it by searching compatdata
+        for compat_root in [Path.home() / ".local/share/Steam/steamapps/compatdata", Path("/home/deck/.local/share/Steam/steamapps/compatdata")]:
+            config_path = compat_root / "2623190" / "pfx" / "drive_c" / "users" / "steamuser" / "Documents" / "My Games" / "Oblivion Remastered" / "Saved" / "Config" / "Windows"
+            if config_path.is_dir():
+                return config_path
+        return None
+
+    def _find_bundled_file(self, filename: str) -> Optional[Path]:
+        """Find a file bundled with the installer (PyInstaller or dev mode)."""
+        base = Path(getattr(sys, '_MEIPASS', None) or Path(__file__).parent)
+        p = base / filename
+        return p if p.is_file() else None
 
     def _add_done_button(self):
         btn_frame = tk.Frame(self.container, bg=COLORS["bg"])
@@ -1688,18 +1767,38 @@ class CHIMInstaller:
             justify="center",
         ).pack(pady=(0, 40))
 
-        # Tips
+        # Tips — different for PC vs Deck
         tips_frame = tk.Frame(frame, bg=COLORS["bg_light"], padx=20, pady=12)
         tips_frame.pack(pady=(0, 30))
-        tk.Label(
-            tips_frame,
-            text=(
+
+        if self.profile == PROFILE_DECK:
+            tips_text = (
+                "STEAM DECK SETUP\n\n"
+                "1. Use Proton Experimental or GE-Proton 10-1+\n"
+                "2. Set Launch Options to:\n"
+                "   MANGOHUD=1 RADV_PERFTEST=gpl %command%\n\n"
+                "3. Quick Access Menu (... button):\n"
+                "   • Framerate Limit: 30 FPS\n"
+                "   • Refresh Rate: 40 Hz\n"
+                "   • Allow Tearing: Off\n"
+                "   • TDP Limit: 12-15W\n"
+                "   • GPU Clock: 1200 MHz\n\n"
+                "4. Game MUST be on Internal SSD (not SD card)\n"
+                "5. Only change graphics settings from the MAIN MENU\n"
+                "   (changing in-game causes crashes)"
+            )
+        else:
+            tips_text = (
                 "Launch Oblivion Remastered through Steam as usual.\n"
-                "If using Steam Deck, add the following to Launch Options:\n"
-                "WINEDLLOVERRIDES=\"winmm=n,b\" %command%"
-            ),
+                "CHIM is installed and ready to go.\n\n"
+                "If anything looks wrong, use the install log\n"
+                "to troubleshoot or report issues."
+            )
+
+        tk.Label(
+            tips_frame, text=tips_text,
             bg=COLORS["bg_light"], fg=COLORS["text_dim"],
-            font=("Segoe UI", 9), justify="center",
+            font=("Segoe UI", 9), justify="left",
         ).pack()
 
         btn_frame = tk.Frame(frame, bg=COLORS["bg"])
