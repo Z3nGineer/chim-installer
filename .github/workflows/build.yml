@@ -1,0 +1,100 @@
+name: Build CHIM Installer
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller
+          sudo apt-get install -y python3-tk
+
+      - name: Download static 7z binary
+        run: |
+          curl -L "https://www.7-zip.org/a/7z2409-linux-x64.tar.xz" -o 7z.tar.xz
+          tar xf 7z.tar.xz 7zzs
+          chmod +x 7zzs
+
+      - name: Build Linux executable
+        run: |
+          pyinstaller --onefile --name CHIM_Installer --add-data "7zzs:." --windowed chim_installer.py
+
+      - name: Create Linux tarball
+        run: |
+          cd dist
+          tar czf CHIM_Installer_Linux.tar.gz CHIM_Installer
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CHIM_Installer_Linux
+          path: dist/CHIM_Installer_Linux.tar.gz
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install pyinstaller
+
+      - name: Download 7z for Windows
+        run: |
+          curl -L "https://www.7-zip.org/a/7z2409-extra.7z" -o 7z-extra.7z
+          7z x 7z-extra.7z 7za.exe -o.
+        shell: cmd
+
+      - name: Build Windows executable
+        run: |
+          pyinstaller --onefile --name CHIM_Installer --add-data "7za.exe;." --windowed --icon=NONE chim_installer.py
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CHIM_Installer_Windows
+          path: dist/CHIM_Installer.exe
+
+  release:
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            CHIM_Installer_Linux/CHIM_Installer_Linux.tar.gz
+            CHIM_Installer_Windows/CHIM_Installer.exe
+          body: |
+            ## CHIM Installer
+
+            **Windows:** Download `CHIM_Installer.exe` — double-click to run. No dependencies needed.
+
+            **Linux / Steam Deck:** Download `CHIM_Installer_Linux.tar.gz` — extract and double-click `CHIM_Installer`. No dependencies needed.
+
+            Both versions include bundled 7z extraction. Both auto-detect your game install path.
+          draft: false
+          prerelease: false
