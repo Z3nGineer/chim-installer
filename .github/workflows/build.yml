@@ -13,6 +13,15 @@ jobs:
         with:
           lfs: true
 
+      - name: Pull LFS files
+        run: git lfs pull
+
+      - name: Verify patches exist
+        run: |
+          ls -la patches/
+          du -sh patches/
+          ls patches/paks/*.pak | wc -l
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -37,8 +46,6 @@ jobs:
             --name CHIM_Installer \
             --add-data "patches:patches" \
             --add-data "7zzs:." \
-            --add-data "deck_engine.ini:." \
-            --add-data "deck_gameusersettings.ini:." \
             --windowed \
             chim_installer.py
 
@@ -60,6 +67,15 @@ jobs:
         with:
           lfs: true
 
+      - name: Pull LFS files
+        run: git lfs pull
+
+      - name: Verify patches exist
+        shell: powershell
+        run: |
+          Get-ChildItem patches/ | Format-Table Name
+          (Get-ChildItem patches/paks/*.pak).Count
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -72,11 +88,11 @@ jobs:
         shell: powershell
         run: |
           Invoke-WebRequest -Uri "https://www.7-zip.org/a/7z2409-extra.7z" -OutFile "7z-extra.7z"
-          7z x 7z-extra.7z 7za.exe -o.
+          & "C:\Program Files\7-Zip\7z.exe" x 7z-extra.7z 7za.exe "-o."
 
       - name: Build Windows executable (onedir)
         run: |
-          pyinstaller --noconfirm --onedir --name CHIM_Installer --add-data "patches;patches" --add-data "7za.exe;." --add-data "deck_engine.ini;." --add-data "deck_gameusersettings.ini;." --windowed --icon=NONE chim_installer.py
+          pyinstaller --noconfirm --onedir --name CHIM_Installer --add-data "patches;patches" --add-data "7za.exe;." --windowed --icon=NONE chim_installer.py
 
       - name: Create Windows zip
         shell: powershell
@@ -105,13 +121,3 @@ jobs:
           files: |
             CHIM_Installer_Linux/CHIM_Installer_Linux.tar.gz
             CHIM_Installer_Windows/CHIM_Installer_Windows.zip
-          body: |
-            ## CHIM Installer
-
-            **Windows:** Download `CHIM_Installer_Windows.zip` — extract the folder and run `CHIM_Installer.exe`. No dependencies needed.
-
-            **Linux / Steam Deck:** Download `CHIM_Installer_Linux.tar.gz` — extract and run `./CHIM_Installer/CHIM_Installer`. No dependencies needed.
-
-            Both versions include the full patches directory (~370MB) and bundled 7z extraction.
-          draft: false
-          prerelease: false
