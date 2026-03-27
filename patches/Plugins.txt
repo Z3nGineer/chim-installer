@@ -1,0 +1,77 @@
+Oblivion.esm
+DLCBattlehornCastle.esp
+DLCFrostcrag.esp
+DLCHorseArmor.esp
+DLCMehrunesRazor.esp
+DLCOrrery.esp
+DLCShiveringIsles.esp
+DLCSpellTomes.esp
+DLCThievesDen.esp
+DLCVileLair.esp
+Knights.esp
+AltarESPMain.esp
+AltarDeluxe.esp
+AltarESPLocal.esp
+Unofficial Oblivion Remastered Patch.esp
+Dank_WeightlessMisc.esp
+Difficulty Slider Fixed.esp
+Horse Whistle.esp
+No Durability Damage.esp
+AutoUpgradeRewardsOnLevel.esp
+SupremeMagickaRemaster.esp
+SM_AbsorbMysticism.esp
+SM_TurnUndeadRestoration.esp
+SM_WeaknessSchools.esp
+SM_WildSpells.esp
+SM_EnableWildEnchanter.esp
+Balanced NPC Level Cap.esp
+SSTClimatesRevised.esp
+Lumiere.esp
+NaiadComestoLife.esp
+Responsive Combat AI.esp
+Spellcaster Tweaks Responsive Combat Ai.esp
+DynamicAIBehaviorAnimals.esp
+Nascent - Archery Overhaul.esp
+Quest NPCs Run.esp
+AdditionalMapMarkers.esp
+MagicSkillLevelingFixed.esp
+RicherVendors.esp
+EasierPersuasion.esp
+BetterAutoLockpick.esp
+PreserveStats.esp
+Advanced Followers.esp
+DarkBrotherhoodInfinitum.esp
+ImperialLegionInfinitum.esp
+RainFPSFix.esp
+Brighter_Light_Spells.esp
+HomeFT.esp
+Players Horse Improvements x2 Speed.esp
+Idle Dialogue Remaster.esp
+zBEGB_Balanced.esp
+Dank_SpellDuration.esp
+UnlimitedPowers.esp
+LuxuryHouseMod.esp
+LessRestrictiveSpells.esp
+MagesGuildRadiantNecroQuests.esp
+OblivionUnrealFixes-Patch-UORP.esp
+LoreBlivion - Items Deleveled.esp
+LoreBlivion - Spells Deleveled.esp
+Way of the Strong Fist.esp
+Unique Elemental Spells.esp
+Spellcaster Tweaks Base Game.esp
+Spells Reworked.esp
+NPC & Faction Overhaul.esp
+UltimateDialogueOverhaullastfinal8rdolast.esp
+BetterCyrodiilTravel.esp
+NaiadTravelers.esp
+Players Horse Improvements x1 Speed.esp
+A Horse With Saddlebags.esp
+CoreSurvival.esp
+BasicPortableTentUM.esp
+JobsOfOblivion.esp
+ImmersiveVendorAndLoot.esp
+EnhancedEndgameLoot.esp
+AiortaEnchantAdjust.esp
+BetterEnchantingCEEAdjustment.esp
+madCloakSystem.esp
+madLevitation.esp

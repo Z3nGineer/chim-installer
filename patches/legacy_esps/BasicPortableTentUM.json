@@ -1,0 +1,37 @@
+{
+	"Plugin": "BasicPortableTentUM.esp",
+	"NewCells": [
+		"112C6",
+	],
+	"FullNames": {
+		"LOC_FN_BPTTent": "Tent",
+		"LOC_FN_BPTTentBody": "Tent",
+		"LOC_FN_BPTUP": "Portable Tent Upgrade",
+		"LOC_FN_BPTUPM": "Portable Tent Upgrade for Mage",
+		"LOC_FN_BPTUPW": "Portable Tent Upgrade for Warrior",
+		"LOC_FN_BPTDeed": "Portable Tent Deed",
+		"LOC_FN_BPTMats": "Basic Tent Materials",
+	},
+	"BookContent": {
+		"LOC_BK_BPTDeedContent": "<font face=5><div align=\"center\">\nYou own a Tent\n",
+		"LOC_BK_BPTUpgradeContent": "<font face=5><div align=\"center\">\nYou upgraded your tent. No going back now.\n ",
+	},
+	"ScriptContent": {
+		"LOC_SC_BPT_TENT_ASK": "What would you like to do?",
+		"LOC_SC_BPT_TENT_ANS": "Take Down Tent",
+		"LOC_SC_BPT_TENT_EXIT": "Exit",
+		"LOC_SC_BPT_TENT_ET": "Emergency teleport failed, use coc <cellname>",
+		"LOC_SC_BPT_TENT_MATS_DROP": "Drop the tent materials?",
+		"LOC_SC_BPT_YES": "Yes",
+		"LOC_SC_BPT_NO": "No",
+		"LOC_SC_BPT_DEED_ASK": "What do you need?",
+		"LOC_SC_BPT_DEED_ANS1": "New Tent",
+		"LOC_SC_BPT_DEED_ANS2": "Tent Upgrade",
+		"LOC_SC_BPT_DEED_ANS3": "Magic Tent Upgrade",
+		"LOC_SC_BPT_DEED_ANS4": "Remove Upgardes",
+		"LOC_SC_BPT_DEED_ANS5": "Adjust Height Items",
+		"LOC_SC_BPT_DEED_WARN": "Are you sure you want to drop this?",
+		"LOC_SC_BPT_TENT_MATS_ASK": "Set up the tent?" ,
+		"LOC_SC_BPT_UPM_WARN": "Please Purchase the main Upgrade",
+	}
+}

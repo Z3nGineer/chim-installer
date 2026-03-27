@@ -1,0 +1,19 @@
+{
+    "RequiresVersion": "2.4",
+    "NewStrings": {
+        "LOC_SC_AHWS_NotOwned": "You cannot access the saddlebags of a horse you do not own.",
+        "LOC_SC_AHWS_TooFar": "You need to be closer to open your saddle bags.",
+        "LOC_SC_AHWS_NotRidden": "You can only access the saddlebags of horses you own and have ridden.",
+        "LOC_SC_AHWS_ContentInfo_%.0f_%.0f": "Your saddlebags contain {Arg01}|obvArgDecimals(0) of {Arg02}|obvArgDecimals(0) weight.",
+        "LOC_SC_AHWS_HorseBurdened_%.0f_%.0f": "Your mount is overburdened and cannot move ({Arg01}|obvArgDecimals(0)/{Arg02}|obvArgDecimals(0)).",
+        "LOC_SC_AHWS_PlayerUnreachable": "Your mount cannot reach you here.",
+        "LOC_SC_AHWS_PlayerSwimming": "You cannot call your mount when swimming.",
+        "LOC_SC_AHWS_NoMount": "You do not have a mount to call.",
+        "LOC_SC_AHWS_StolenHorse": "You cannot call a stolen mount.",
+        "LOC_SC_AHWS_HorseWaiting": "Your mount will wait here until you call.",
+        "LOC_SC_AHWS_HorseFollowing": "Your mount is now following you.",
+	"LOC_SC_HorsePCWhiteAnvilScript_MISSING": "Your White horse has returned to Anvil's stables.",
+        "LOC_FN_LootBag": "Saddle bags",
+        "LOC_FN_AHWS_WhistleSpell": "Horse Whistle"
+    }
+}

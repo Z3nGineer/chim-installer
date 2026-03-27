@@ -1,19 +1,11 @@
 # -*- mode: python ; coding: utf-8 -*-
-# CHIM Installer — PyInstaller spec (--onedir mode)
-# patches/ is ~370MB so --onefile is impractical; --onedir keeps it alongside the exe.
 
-import sys
 
 a = Analysis(
     ['chim_installer.py'],
     pathex=[],
     binaries=[],
-    datas=[
-        ('patches', 'patches'),
-        ('7zzs', '.'),
-        ('deck_engine.ini', '.'),
-        ('deck_gameusersettings.ini', '.'),
-    ],
+    datas=[('patches', 'patches')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -34,14 +26,13 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=False,
+    console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
 )
-
 coll = COLLECT(
     exe,
     a.binaries,

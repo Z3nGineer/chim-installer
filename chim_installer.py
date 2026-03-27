@@ -9,6 +9,7 @@ Optional: p7zip, unrar (for .7z/.rar extraction)
 import os
 import sys
 import glob
+import json
 import shutil
 import zipfile
 import subprocess
@@ -20,79 +21,105 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from pathlib import Path
 from typing import Optional
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
 
 # ─── Mod Database ───────────────────────────────────────────────────────────────
 
 MODS = [
     # Bug Fixes & Framework
-    {"name": "OBSE64", "nexus_id": 282, "type": "obse_framework", "category": "Bug Fixes & Framework"},
-    {"name": "Address Library", "nexus_id": 4475, "type": "obse", "category": "Bug Fixes & Framework"},
-    {"name": "UE4SS", "nexus_id": 32, "type": "ue4ss_framework", "category": "Bug Fixes & Framework"},
-    {"name": "Unofficial Oblivion Remastered Patch", "nexus_id": 477, "type": "esp", "category": "Bug Fixes & Framework"},
+    # OBSE64 (282), UE4SS (32), Address Library (4475), ActiveEffectsFix (4994),
+    # Baka Achievement Enabler (145), No Enchantment Drain (1253) are ALL bundled
+    # in patches/obse_framework/ and patches/obse_plugins/ — NOT downloaded from Nexus.
+    {"name": "Unofficial Oblivion Remastered Patch", "nexus_id": 477, "type": "esp", "category": "Bug Fixes & Framework", "load_order": 1, "esp_name": "Unofficial Oblivion Remastered Patch.esp"},
     {"name": "Oblivion Unreal Fixes", "nexus_id": 4676, "type": "pak", "category": "Bug Fixes & Framework"},
-    {"name": "ActiveEffectsFix", "nexus_id": 4994, "type": "obse", "category": "Bug Fixes & Framework"},
-    {"name": "Baka Achievement Enabler", "nexus_id": 145, "type": "obse", "category": "Bug Fixes & Framework"},
-    {"name": "Difficulty Slider Fixed", "nexus_id": 58, "type": "esp", "category": "Bug Fixes & Framework"},
-    {"name": "RainFPSFix", "nexus_id": 566, "type": "esp", "category": "Bug Fixes & Framework"},
+    # ActiveEffectsFix (4994) and Baka Achievement Enabler (145) — bundled in patches/obse_plugins/
+    {"name": "Difficulty Slider Fixed", "nexus_id": 58, "type": "esp", "category": "Bug Fixes & Framework", "load_order": 2, "esp_name": "Difficulty Slider Fixed.esp"},
+    {"name": "RainFPSFix", "nexus_id": 566, "type": "esp", "category": "Bug Fixes & Framework", "load_order": 3, "esp_name": "RainFPSFix.esp"},
     # Visuals & Lighting
-    {"name": "Shaders Revised", "nexus_id": 1528, "type": "ue4ss", "category": "Visuals & Lighting"},
-    {"name": "Lumen Remastered", "nexus_id": 1129, "type": "ue4ss", "category": "Visuals & Lighting"},
-    {"name": "Lumiere", "nexus_id": 3100, "type": "esp", "category": "Visuals & Lighting"},
-    {"name": "Eternal Darkness", "nexus_id": 5136, "type": "ue4ss", "category": "Visuals & Lighting"},
-    {"name": "Ultra Plus", "nexus_id": 27, "type": "ue4ss", "category": "Visuals & Lighting"},
+    {"name": "Shaders Revised", "nexus_id": 1528, "type": "ue4ss", "category": "Visuals & Lighting", "ue4ss_folder": "ShadersRevised"},
+    {"name": "Lumen Remastered", "nexus_id": 1129, "type": "ue4ss", "category": "Visuals & Lighting", "ue4ss_folder": "LumenRemastered"},
+    {"name": "Lumiere", "nexus_id": 3100, "type": "pak", "category": "Visuals & Lighting"},
+    {"name": "Eternal Darkness", "nexus_id": 5136, "type": "ue4ss", "category": "Visuals & Lighting", "ue4ss_folder": "EternalDarkness"},
+    {"name": "Ultra Plus", "nexus_id": 27, "type": "ue4ss", "category": "Visuals & Lighting", "ue4ss_folder": "UltraPlusExtensions"},
     {"name": "Young Textures Revamped", "nexus_id": 445, "type": "pak", "category": "Visuals & Lighting"},
     {"name": "Greener Grass", "nexus_id": 2279, "type": "pak", "category": "Visuals & Lighting"},
     {"name": "Connor's Flora", "nexus_id": 4740, "type": "pak", "category": "Visuals & Lighting"},
-    {"name": "NPC Overhaul AIO", "nexus_id": 3096, "type": "ue4ss", "category": "Visuals & Lighting"},
+    {"name": "NPC Overhaul AIO", "nexus_id": 3096, "type": "ue4ss", "category": "Visuals & Lighting", "ue4ss_folder": "NPCAppearanceManager", "no_enabled_txt": True},
     {"name": "8K Color World Map", "nexus_id": 944, "type": "pak", "category": "Visuals & Lighting"},
     {"name": "Brighter Torches 1.5x", "nexus_id": 2821, "type": "pak", "category": "Visuals & Lighting"},
+    {"name": "Realistic HQ Skin", "nexus_id": 1284, "type": "pak", "category": "Visuals & Lighting"},
+    {"name": "All Customization Options Unlocked", "nexus_id": 344, "type": "pak", "category": "Visuals & Lighting"},
     # Camera & Animations
     {"name": "Improved Camera", "nexus_id": 2362, "type": "pak", "category": "Camera & Animations"},
-    {"name": "Pelinal's Edge", "nexus_id": 4781, "type": "pak", "category": "Camera & Animations"},
-    {"name": "Morihaus Might", "nexus_id": 4318, "type": "pak", "category": "Camera & Animations"},
-    {"name": "Longsword Overhaul", "nexus_id": 4541, "type": "pak", "category": "Camera & Animations"},
-    {"name": "Shortsword Anticipation", "nexus_id": 2489, "type": "pak", "category": "Camera & Animations"},
+    {"name": "Kei Animations - Legacy", "nexus_id": 4825, "type": "pak", "category": "Camera & Animations"},
     # Combat & Magic
-    {"name": "UltraCombat V2", "nexus_id": 4244, "type": "ue4ss", "category": "Combat & Magic"},
-    {"name": "Responsive Combat AI", "nexus_id": 2792, "type": "esp", "category": "Combat & Magic"},
-    {"name": "Responsive Spellcaster AI", "nexus_id": 5197, "type": "esp", "category": "Combat & Magic"},
-    {"name": "Supreme Magicka", "nexus_id": 1098, "type": "esp", "category": "Combat & Magic"},
-    {"name": "Nascent Archery", "nexus_id": 2149, "type": "esp", "category": "Combat & Magic"},
-    {"name": "Magic Skill Leveling Fixed", "nexus_id": 3965, "type": "esp", "category": "Combat & Magic"},
+    {"name": "UltraCombat V2", "nexus_id": 4244, "type": "ue4ss", "category": "Combat & Magic", "ue4ss_folder": "UltraCombat"},
+    {"name": "Responsive Combat AI", "nexus_id": 2792, "type": "esp", "category": "Combat & Magic", "load_order": 20, "esp_name": "Responsive Combat AI.esp"},
+    {"name": "Responsive Spellcaster AI", "nexus_id": 5197, "type": "esp", "category": "Combat & Magic", "load_order": 21, "esp_name": "Spellcaster Tweaks Base Game.esp"},
+    {"name": "Supreme Magicka", "nexus_id": 1098, "type": "esp", "category": "Combat & Magic", "load_order": 22, "esp_name": "SupremeMagickaRemaster.esp"},
+    {"name": "Nascent Archery", "nexus_id": 2149, "type": "esp", "category": "Combat & Magic", "load_order": 23, "esp_name": "Nascent - Archery Overhaul.esp"},
+    {"name": "Magic Skill Leveling Fixed", "nexus_id": 3965, "type": "esp", "category": "Combat & Magic", "load_order": 24, "esp_name": "MagicSkillLevelingFixed.esp"},
+    {"name": "Way of the Fist", "nexus_id": 1323, "type": "esp", "category": "Combat & Magic", "load_order": 25, "esp_name": "Way of the Strong Fist.esp"},
+    {"name": "Unique Elemental Spells", "nexus_id": 119, "type": "esp", "category": "Combat & Magic", "load_order": 26, "esp_name": "Unique Elemental Spells.esp"},
+    {"name": "Engaging Combat", "nexus_id": 1812, "type": "ue4ss", "category": "Combat & Magic", "ue4ss_folder": "EngagingCombat"},
     # AI & World
-    {"name": "NPCs Come to Life", "nexus_id": 3363, "type": "esp", "category": "AI & World"},
-    {"name": "Dynamic AI Animals", "nexus_id": 2228, "type": "esp", "category": "AI & World"},
-    {"name": "Climates Revised", "nexus_id": 791, "type": "esp", "category": "AI & World"},
-    {"name": "Balanced NPC Level Cap", "nexus_id": 182, "type": "esp", "category": "AI & World"},
-    {"name": "Quest NPCs Run", "nexus_id": 219, "type": "esp", "category": "AI & World"},
+    {"name": "NPC and Faction Overhaul", "nexus_id": 5140, "type": "esp", "category": "AI & World", "load_order": 30, "esp_name": "NPC & Faction Overhaul.esp"},
+    {"name": "Dynamic AI Animals", "nexus_id": 2228, "type": "esp", "category": "AI & World", "load_order": 31, "esp_name": "DynamicAIBehaviorAnimals.esp"},
+    {"name": "Climates Revised", "nexus_id": 791, "type": "esp", "category": "AI & World", "load_order": 32, "esp_name": "SSTClimatesRevised.esp"},
+    {"name": "Quest NPCs Run", "nexus_id": 219, "type": "esp", "category": "AI & World", "load_order": 33, "esp_name": "Quest NPCs Run.esp"},
+    {"name": "Ultimate Dialogue Overhaul", "nexus_id": 5183, "type": "esp", "category": "AI & World", "load_order": 35, "esp_name": "UltimateDialogueOverhaullastfinal8rdolast.esp"},
+    {"name": "NPCs Come to Life", "nexus_id": 3363, "type": "esp", "category": "AI & World", "load_order": 37, "esp_name": "NaiadTravelers.esp"},
+    {"name": "Balanced NPC Level Cap", "nexus_id": 182, "type": "esp", "category": "AI & World", "load_order": 38, "esp_name": "Balanced NPC Level Cap.esp"},
     # Items & Progression
-    {"name": "Auto Upgrade Leveled Items", "nexus_id": 567, "type": "esp", "category": "Items & Progression"},
-    {"name": "No Durability Damage", "nexus_id": 109, "type": "esp", "category": "Items & Progression"},
-    {"name": "No Enchantment Drain", "nexus_id": 1253, "type": "obse", "category": "Items & Progression"},
-    {"name": "Carry Weight + Weightless Misc", "nexus_id": 1734, "type": "ue4ss", "category": "Items & Progression"},
+    {"name": "Auto Upgrade Leveled Items", "nexus_id": 567, "type": "esp", "category": "Items & Progression", "load_order": 40, "esp_name": "AutoUpgradeRewardsOnLevel.esp"},
+    {"name": "No Durability Damage", "nexus_id": 109, "type": "esp", "category": "Items & Progression", "load_order": 41, "esp_name": "No Durability Damage.esp"},
+    # No Enchantment Drain (1253) — bundled in patches/obse_plugins/
+    {"name": "Carry Weight + Weightless Misc", "nexus_id": 1734, "type": "ue4ss", "category": "Items & Progression", "ue4ss_folder": "CarryWeightEncumbranceOverhaul"},
+    {"name": "Aiorta's Enchantment Adjustments", "nexus_id": 4645, "type": "esp", "category": "Items & Progression", "load_order": 42, "esp_name": "AiortaEnchantAdjust.esp"},
+    {"name": "Better Enchanting and Soul Gems", "nexus_id": 1500, "type": "esp", "category": "Items & Progression", "load_order": 43, "esp_name": "BetterEnchantingCEEAdjustment.esp"},
     # Spells & Powers
-    {"name": "Spell Duration x10", "nexus_id": 1087, "type": "esp", "category": "Spells & Powers"},
-    {"name": "Unlimited Powers", "nexus_id": 1461, "type": "esp", "category": "Spells & Powers"},
-    {"name": "Spell Freedom", "nexus_id": 138, "type": "esp", "category": "Spells & Powers"},
+    {"name": "Spell Duration x10", "nexus_id": 1087, "type": "esp", "category": "Spells & Powers", "load_order": 50, "esp_name": "Dank_SpellDuration.esp"},
+    {"name": "Unlimited Powers", "nexus_id": 1461, "type": "esp", "category": "Spells & Powers", "load_order": 51, "esp_name": "UnlimitedPowers.esp"},
+    {"name": "Spell Freedom", "nexus_id": 138, "type": "esp", "category": "Spells & Powers", "load_order": 52, "esp_name": "LessRestrictiveSpells.esp"},
+    {"name": "Spells Reworked", "nexus_id": 1238, "type": "esp", "category": "Spells & Powers", "load_order": 53, "esp_name": "Spells Reworked.esp"},
     # UI & Quality of Life
     {"name": "Better HUD Slim", "nexus_id": 13, "type": "pak", "category": "UI & Quality of Life"},
-    {"name": "MISS Inventory Sorter", "nexus_id": 3288, "type": "ue4ss", "category": "UI & Quality of Life"},
-    {"name": "Auto Local Map", "nexus_id": 1119, "type": "ue4ss", "category": "UI & Quality of Life"},
-    {"name": "Additional Map Markers", "nexus_id": 479, "type": "esp", "category": "UI & Quality of Life"},
-    {"name": "Horse Whistle", "nexus_id": 153, "type": "esp", "category": "UI & Quality of Life"},
-    {"name": "Easier Persuasion", "nexus_id": 3393, "type": "esp", "category": "UI & Quality of Life"},
-    {"name": "Better Auto Lockpick", "nexus_id": 418, "type": "esp", "category": "UI & Quality of Life"},
-    {"name": "Richer Vendors", "nexus_id": 96, "type": "esp", "category": "UI & Quality of Life"},
-    {"name": "PreserveStats", "nexus_id": 783, "type": "esp", "category": "UI & Quality of Life"},
+    {"name": "MISS Inventory Sorter", "nexus_id": 3288, "type": "obse_config", "category": "UI & Quality of Life"},
+    {"name": "Auto Local Map", "nexus_id": 1119, "type": "ue4ss", "category": "UI & Quality of Life", "ue4ss_folder": "AutoLocalMap"},
+    {"name": "Additional Map Markers", "nexus_id": 479, "type": "esp", "category": "UI & Quality of Life", "load_order": 60, "esp_name": "AdditionalMapMarkers.esp"},
+    {"name": "Horse Whistle", "nexus_id": 153, "type": "esp", "category": "UI & Quality of Life", "load_order": 61, "esp_name": "Horse Whistle.esp"},
+    {"name": "Fixed Persuasion", "nexus_id": 1913, "type": "esp", "category": "UI & Quality of Life", "load_order": 62, "esp_name": "EasierPersuasion.esp"},
+    {"name": "Better Auto Lockpick", "nexus_id": 418, "type": "esp", "category": "UI & Quality of Life", "load_order": 63, "esp_name": "BetterAutoLockpick.esp"},
+    # Richer Vendors removed — overwritten by Immersive Vendor and Loot (4100)
+    {"name": "PreserveStats", "nexus_id": 783, "type": "esp", "category": "UI & Quality of Life", "load_order": 65, "esp_name": "PreserveStats.esp"},
     {"name": "Quieter Lockpicking", "nexus_id": 1788, "type": "pak", "category": "UI & Quality of Life"},
+    {"name": "Better Movement", "nexus_id": 2479, "type": "ue4ss", "category": "UI & Quality of Life", "ue4ss_folder": "BetterMovement"},
+    {"name": "Simple Photo Mode", "nexus_id": 85, "type": "pak", "category": "UI & Quality of Life"},
     # Audio
     {"name": "High Quality Music Replacer", "nexus_id": 1267, "type": "pak", "category": "Audio"},
+    {"name": "Armor Sound Overhaul", "nexus_id": 1987, "type": "pak", "category": "Audio"},
+    # Stealth
+    {"name": "Better Sneak", "nexus_id": 1921, "type": "ue4ss", "category": "Stealth", "ue4ss_folder": "BetterSneak"},
+    {"name": "Harder Stealth", "nexus_id": 1732, "type": "config", "category": "Stealth", "config_dest": "gamesettings"},
+    # Travel & Mounts
+    {"name": "Better Cyrodiil Travel", "nexus_id": 1496, "type": "esp", "category": "Travel & Mounts", "load_order": 36, "esp_name": "BetterCyrodiilTravel.esp"},
+    {"name": "Horse Improvements", "nexus_id": 1832, "type": "esp", "category": "Travel & Mounts", "load_order": 66, "esp_name": "Players Horse Improvements x1 Speed.esp"},
+    {"name": "A Horse With Saddlebags", "nexus_id": 4527, "type": "esp", "category": "Travel & Mounts", "load_order": 67, "esp_name": "A Horse With Saddlebags.esp"},
+    # Survival
+    {"name": "Core Survival", "nexus_id": 3037, "type": "esp", "category": "Survival", "load_order": 80, "esp_name": "CoreSurvival.esp"},
+    {"name": "Basic Portable Tent", "nexus_id": 967, "type": "esp", "category": "Survival", "load_order": 81, "esp_name": "BasicPortableTentUM.esp"},
+    # Economy & Loot
+    {"name": "Jobs of Oblivion", "nexus_id": 5189, "type": "esp", "category": "Economy & Loot", "load_order": 82, "esp_name": "JobsOfOblivion.esp"},
+    {"name": "Immersive Vendor and Loot", "nexus_id": 4100, "type": "esp", "category": "Economy & Loot", "load_order": 83, "esp_name": "ImmersiveVendorAndLoot.esp"},
+    {"name": "Enhanced Endgame Loot", "nexus_id": 1871, "type": "esp", "category": "Economy & Loot", "load_order": 84, "esp_name": "EnhancedEndgameLoot.esp"},
     # New Content
-    {"name": "Dark Brotherhood Infinitum", "nexus_id": 3170, "type": "esp", "category": "New Content"},
-    {"name": "Imperial Legion Infinitum", "nexus_id": 4225, "type": "esp", "category": "New Content"},
-    {"name": "Advanced Followers", "nexus_id": 722, "type": "esp", "category": "New Content"},
-    {"name": "Lakeheart Manor", "nexus_id": 763, "type": "esp", "category": "New Content"},
-    {"name": "Radiant Mages Guild Quests", "nexus_id": 3858, "type": "esp", "category": "New Content"},
+    {"name": "Dark Brotherhood Infinitum", "nexus_id": 3170, "type": "esp", "category": "New Content", "load_order": 90, "esp_name": "DarkBrotherhoodInfinitum.esp"},
+    {"name": "Imperial Legion Infinitum", "nexus_id": 4225, "type": "esp", "category": "New Content", "load_order": 91, "esp_name": "ImperialLegionInfinitum.esp"},
+    {"name": "Advanced Followers", "nexus_id": 722, "type": "esp", "category": "New Content", "load_order": 92, "esp_name": "Advanced Followers.esp"},
+    {"name": "Lakeheart Manor", "nexus_id": 763, "type": "esp", "category": "New Content", "load_order": 93, "esp_name": "LuxuryHouseMod.esp"},
+    {"name": "Radiant Mages Guild Quests", "nexus_id": 3858, "type": "esp", "category": "New Content", "load_order": 94, "esp_name": "MagesGuildRadiantNecroQuests.esp"},
+    {"name": "Mad Spell Pack", "nexus_id": 4242, "type": "ue4ss", "category": "New Content", "ue4ss_folder": "MadSpellPack", "archive_ue4ss_folders": ["MadSpellPack", "MadTransform"]},
 ]
 
 # ─── Deck Optimization Mods (replaces visual mods on Steam Deck) ─────────────
@@ -129,31 +156,65 @@ PROFILE_DECK = "deck"
 NEXUS_GAME_DOMAIN = "oblivionremastered"
 NEXUS_BASE = f"https://www.nexusmods.com/{NEXUS_GAME_DOMAIN}/mods"
 
+CHIM_CONFIG_DIR = Path.home() / ".config" / "chim-installer"
+CHIM_CONFIG_FILE = CHIM_CONFIG_DIR / "config.json"
+
+
+def load_saved_api_key() -> str:
+    """Load saved Nexus API key from config file."""
+    try:
+        if CHIM_CONFIG_FILE.is_file():
+            data = json.loads(CHIM_CONFIG_FILE.read_text())
+            return data.get("nexus_api_key", "")
+    except (json.JSONDecodeError, OSError):
+        pass
+    return ""
+
+
+def save_api_key(api_key: str):
+    """Save Nexus API key to config file."""
+    try:
+        CHIM_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        data = {}
+        if CHIM_CONFIG_FILE.is_file():
+            try:
+                data = json.loads(CHIM_CONFIG_FILE.read_text())
+            except (json.JSONDecodeError, OSError):
+                pass
+        data["nexus_api_key"] = api_key
+        CHIM_CONFIG_FILE.write_text(json.dumps(data, indent=2))
+    except OSError:
+        pass
+
 # ─── Theme ──────────────────────────────────────────────────────────────────────
 
 COLORS = {
-    "bg":           "#0a0a0a",
-    "bg_light":     "#141414",
-    "bg_lighter":   "#1e1e1e",
-    "bg_row_alt":   "#121218",
+    "bg":           "#0c0b08",
+    "bg_light":     "#15130e",
+    "bg_lighter":   "#1e1b14",
+    "bg_row_alt":   "#12100b",
+    "bg_warm":      "#1a1610",
     "gold":         "#c9a84c",
-    "gold_dim":     "#8a7333",
-    "gold_bright":  "#e6c65a",
-    "text":         "#d4d4d4",
-    "text_dim":     "#888888",
-    "text_bright":  "#f0f0f0",
-    "green":        "#4caf50",
-    "green_dim":    "#2e7d32",
-    "red":          "#cf6679",
+    "gold_dim":     "#7a6530",
+    "gold_bright":  "#e8cc6a",
+    "gold_pale":    "#d4be7a",
+    "text":         "#cdc0ae",
+    "text_dim":     "#8a7e6e",
+    "text_bright":  "#efe8da",
+    "green":        "#6aab5c",
+    "green_dim":    "#3d7a32",
+    "red":          "#c45e5e",
     "blue":         "#5c9fd6",
-    "border":       "#2a2a2a",
-    "progress_bg":  "#1a1a1a",
+    "border":       "#2a2518",
+    "border_gold":  "#3a3020",
+    "progress_bg":  "#1a1710",
     "progress_fg":  "#c9a84c",
-    "btn_bg":       "#1e1e1e",
-    "btn_hover":    "#2a2a2a",
-    "btn_active":   "#333333",
-    "scrollbar":    "#333333",
-    "scrollbar_bg": "#0f0f0f",
+    "btn_bg":       "#1a1710",
+    "btn_hover":    "#2a2518",
+    "btn_active":   "#3a3020",
+    "scrollbar":    "#3a3020",
+    "scrollbar_bg": "#0c0b08",
+    "ornament":     "#4a3f28",
 }
 
 CATEGORY_ICONS = {
@@ -175,6 +236,10 @@ STATUS_DOWNLOADED = "downloaded"
 STATUS_SKIPPED    = "skipped"
 STATUS_INSTALLED  = "installed"
 
+CATEGORY_ICONS["Stealth"]           = "\U0001f5e1"  # 🗡
+CATEGORY_ICONS["Travel & Mounts"]   = "\U0001f3c7"  # 🏇
+CATEGORY_ICONS["Survival"]          = "\U0001f525"  # 🔥
+CATEGORY_ICONS["Economy & Loot"]    = "\U0001f4b0"  # 💰
 CATEGORY_ICONS["Deck Optimization"] = "\u26a1"  # ⚡
 
 
@@ -211,14 +276,245 @@ def is_steam_deck() -> bool:
     return False
 
 
+# ─── Nexus API ──────────────────────────────────────────────────────────────────
+
+NEXUS_API_BASE = "https://api.nexusmods.com/v1"
+NEXUS_API_GAME = "oblivionremastered"
+
+
+def nexus_api_request(endpoint: str, api_key: str) -> Optional[dict]:
+    """Make an authenticated Nexus API request. Returns parsed JSON or None."""
+    url = f"{NEXUS_API_BASE}{endpoint}"
+    req = Request(url)
+    req.add_header("apikey", api_key)
+    req.add_header("Accept", "application/json")
+    req.add_header("User-Agent", "CHIM-Installer/1.3")
+    try:
+        with urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read().decode())
+    except (HTTPError, URLError, json.JSONDecodeError):
+        return None
+
+
+def nexus_api_validate_key(api_key: str) -> tuple[bool, bool, str]:
+    """
+    Validate a Nexus API key. Returns (valid, is_premium, username).
+    """
+    data = nexus_api_request("/users/validate.json", api_key)
+    if not data or "user_id" not in data:
+        return False, False, ""
+    is_premium = data.get("is_premium", False)
+    username = data.get("name", "")
+    return True, is_premium, username
+
+
+def nexus_api_get_mod_files(nexus_id: int, api_key: str) -> Optional[list]:
+    """Get the list of files for a mod."""
+    data = nexus_api_request(
+        f"/games/{NEXUS_API_GAME}/mods/{nexus_id}/files.json", api_key
+    )
+    if data and "files" in data:
+        return data["files"]
+    return None
+
+
+def nexus_api_get_download_url(nexus_id: int, file_id: int, api_key: str) -> Optional[str]:
+    """Get a download URL for a specific file (Premium only)."""
+    data = nexus_api_request(
+        f"/games/{NEXUS_API_GAME}/mods/{nexus_id}/files/{file_id}/download_link.json",
+        api_key,
+    )
+    if data and isinstance(data, list) and len(data) > 0:
+        return data[0].get("URI")
+    return None
+
+
+def nexus_api_pick_main_file(files: list) -> Optional[dict]:
+    """Pick the best file to download — prefer MAIN_FILE category."""
+    main_files = [f for f in files if f.get("category_name") == "MAIN"]
+    if main_files:
+        # Pick the most recent main file
+        main_files.sort(key=lambda f: f.get("uploaded_timestamp", 0), reverse=True)
+        return main_files[0]
+    # Fall back to any non-archived file
+    active = [f for f in files if f.get("category_name") != "ARCHIVED"]
+    if active:
+        active.sort(key=lambda f: f.get("uploaded_timestamp", 0), reverse=True)
+        return active[0]
+    return files[0] if files else None
+
+
+def nexus_api_download_file(url: str, dest_path: Path, progress_cb=None) -> bool:
+    """Download a file from a URL to dest_path. Optional progress callback(bytes_so_far, total)."""
+    # Python 3.14+ rejects unencoded spaces in URLs — encode the path component
+    from urllib.parse import urlparse, quote, urlunparse
+    parsed = urlparse(url)
+    safe_path = quote(parsed.path, safe="/:@!$&'()*+,;=-._~")
+    url = urlunparse(parsed._replace(path=safe_path))
+    req = Request(url)
+    req.add_header("User-Agent", "CHIM-Installer/1.3")
+    try:
+        with urlopen(req, timeout=120) as resp:
+            total = int(resp.headers.get("Content-Length", 0))
+            downloaded = 0
+            chunk_size = 65536
+            with open(dest_path, "wb") as f:
+                while True:
+                    chunk = resp.read(chunk_size)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    if progress_cb:
+                        progress_cb(downloaded, total)
+        return True
+    except (HTTPError, URLError, OSError):
+        # Clean up partial download
+        if dest_path.exists():
+            dest_path.unlink()
+        return False
+
+
+OBLIVION_APP_ID = "2623190"
+
+LAUNCH_OPTIONS_LINUX = (
+    'WINEDLLOVERRIDES="winmm=n,b" DXVK_ASYNC=1 SDL_HAPTIC_DISABLED=1 bash -c \'exec '
+    '"${@/OblivionRemastered.exe/OblivionRemastered/Binaries/Win64/obse64_loader.exe}"'
+    "' -- %command%"
+)
+
+LAUNCH_OPTIONS_WINDOWS = (
+    '"%command%/../obse64_loader.exe"'
+)
+
+
+def find_steam_localconfig() -> Optional[Path]:
+    """Find Steam's localconfig.vdf for the current user."""
+    userdata_roots = [
+        Path.home() / ".local/share/Steam/userdata",
+        Path("/home/deck/.local/share/Steam/userdata"),
+        Path.home() / ".var/app/com.valvesoftware.Steam/.local/share/Steam/userdata",
+        # Windows paths (through Proton or native)
+        Path.home() / ".steam/steam/userdata",
+    ]
+    for root in userdata_roots:
+        if not root.is_dir():
+            continue
+        for user_dir in root.iterdir():
+            if not user_dir.is_dir():
+                continue
+            config = user_dir / "config" / "localconfig.vdf"
+            if config.is_file():
+                return config
+    return None
+
+
+def get_steam_launch_options(config_path: Path, app_id: str) -> Optional[str]:
+    """Read the current launch options for an app from localconfig.vdf."""
+    try:
+        content = config_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+
+    # Simple VDF parser — find the app block and extract LaunchOptions
+    lines = content.split("\n")
+    in_app = False
+    depth = 0
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if not in_app:
+            if f'"{app_id}"' in stripped and "{" not in stripped:
+                # Check if next non-empty line is {
+                for j in range(i + 1, min(i + 3, len(lines))):
+                    if lines[j].strip() == "{":
+                        in_app = True
+                        depth = 1
+                        break
+        else:
+            if stripped == "{":
+                depth += 1
+            elif stripped == "}":
+                depth -= 1
+                if depth <= 0:
+                    break
+            elif '"LaunchOptions"' in stripped:
+                # Extract value: "LaunchOptions"		"value"
+                parts = stripped.split('"')
+                # parts: ['', 'LaunchOptions', '', '', 'value', '']
+                if len(parts) >= 5:
+                    return parts[4] if parts[4] else parts[3]
+                return ""
+    return None
+
+
+def set_steam_launch_options(config_path: Path, app_id: str, launch_options: str) -> bool:
+    """Write launch options for an app in localconfig.vdf. Returns True on success."""
+    try:
+        content = config_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+
+    lines = content.split("\n")
+    in_app = False
+    depth = 0
+    found_launch = False
+
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if not in_app:
+            if f'"{app_id}"' in stripped and "{" not in stripped:
+                for j in range(i + 1, min(i + 3, len(lines))):
+                    if lines[j].strip() == "{":
+                        in_app = True
+                        depth = 1
+                        break
+        else:
+            if stripped == "{":
+                depth += 1
+            elif stripped == "}":
+                depth -= 1
+                if depth <= 0:
+                    if not found_launch:
+                        # Insert LaunchOptions before closing brace
+                        indent = "\t" * (line.count("\t"))
+                        lines.insert(i, f'{indent}\t"LaunchOptions"\t\t"{launch_options}"')
+                        found_launch = True
+                    break
+            elif '"LaunchOptions"' in stripped:
+                # Replace existing value
+                indent = line[:len(line) - len(line.lstrip())]
+                lines[i] = f'{indent}"LaunchOptions"\t\t"{launch_options}"'
+                found_launch = True
+
+    if not found_launch:
+        return False
+
+    try:
+        # Backup original
+        backup = config_path.with_suffix(".vdf.chim_backup")
+        if not backup.exists():
+            import shutil
+            shutil.copy2(config_path, backup)
+        config_path.write_text("\n".join(lines), encoding="utf-8")
+        return True
+    except OSError:
+        return False
+
+
 def detect_game_path() -> Optional[str]:
-    """Try common Oblivion Remastered install locations."""
+    """Try common Oblivion Remastered install locations (Linux, Deck, Windows)."""
     home = Path.home()
     candidates = [
+        # Linux
         home / ".local/share/Steam/steamapps/common/Oblivion Remastered",
-        Path("/home/deck/.local/share/Steam/steamapps/common/Oblivion Remastered"),
         home / ".steam/steam/steamapps/common/Oblivion Remastered",
         home / ".var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/common/Oblivion Remastered",
+        # Steam Deck
+        Path("/home/deck/.local/share/Steam/steamapps/common/Oblivion Remastered"),
+        # Windows
+        Path("C:/Program Files (x86)/Steam/steamapps/common/Oblivion Remastered"),
+        Path("D:/SteamLibrary/steamapps/common/Oblivion Remastered"),
+        Path("E:/SteamLibrary/steamapps/common/Oblivion Remastered"),
     ]
     for p in candidates:
         if p.is_dir():
@@ -297,7 +593,29 @@ def extract_archive(archive_path: Path, dest_dir: Path) -> bool:
             with zipfile.ZipFile(archive_path, "r") as zf:
                 zf.extractall(dest_dir)
             return True
-        except (zipfile.BadZipFile, Exception):
+        except (zipfile.BadZipFile, NotImplementedError, Exception):
+            # Python zipfile can't handle some compression methods (Deflate64, LZMA)
+            # Fall back to system unzip or 7z
+            unzip = shutil.which("unzip")
+            if unzip:
+                try:
+                    subprocess.run(
+                        [unzip, "-o", str(archive_path), "-d", str(dest_dir)],
+                        check=True, capture_output=True, timeout=300,
+                    )
+                    return True
+                except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                    pass
+            exe = find_7z()
+            if exe:
+                try:
+                    subprocess.run(
+                        [exe, "x", str(archive_path), f"-o{dest_dir}", "-y"],
+                        check=True, capture_output=True, timeout=300,
+                    )
+                    return True
+                except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                    pass
             return False
 
     elif name.endswith(".7z"):
@@ -338,6 +656,203 @@ def extract_archive(archive_path: Path, dest_dir: Path) -> bool:
             return False
 
     return False
+
+
+def build_load_order(installed_mods: list[dict], game_path: Path) -> tuple[Path, list[str]]:
+    """
+    Generate Plugins.txt with correct load order for all installed ESP/ESM mods.
+    IMPORTANT: Format is plain filenames, NO asterisk prefix.
+    Vanilla ESM/ESPs must be listed first.
+    Returns (plugins_path, list_of_plugin_names).
+    """
+    data_dir = game_path / "OblivionRemastered" / "Content" / "Dev" / "ObvData" / "Data"
+
+    # Vanilla load order — must come first, in this exact order
+    vanilla_plugins = [
+        "Oblivion.esm",
+        "DLCBattlehornCastle.esp", "DLCFrostcrag.esp", "DLCHorseArmor.esp",
+        "DLCMehrunesRazor.esp", "DLCOrrery.esp", "DLCShiveringIsles.esp",
+        "DLCSpellTomes.esp", "DLCThievesDen.esp", "DLCVileLair.esp",
+        "Knights.esp", "AltarESPMain.esp", "AltarDeluxe.esp",
+    ]
+
+    # Collect all ESP mods that have load_order defined, sort by it
+    esp_mods = [m for m in installed_mods if m.get("load_order") is not None]
+    esp_mods.sort(key=lambda m: m["load_order"])
+
+    # Also discover any .esp/.esm files actually on disk that we didn't track
+    on_disk = set()
+    if data_dir.is_dir():
+        for f in data_dir.iterdir():
+            if f.is_file() and f.suffix.lower() in (".esp", ".esm"):
+                on_disk.add(f.name)
+
+    # Build ordered plugin list
+    ordered = []
+    seen = set()
+
+    # Vanilla first
+    for plugin in vanilla_plugins:
+        if plugin in on_disk:
+            ordered.append(plugin)
+            seen.add(plugin)
+
+    # Then mod ESPs in defined load order
+    for mod in esp_mods:
+        esp_name = mod.get("esp_name")
+        if esp_name and esp_name not in seen:
+            ordered.append(esp_name)
+            seen.add(esp_name)
+
+    # Then any on-disk plugins we didn't have in our load order
+    for name in sorted(on_disk):
+        if name not in seen:
+            ordered.append(name)
+            seen.add(name)
+
+    # Write Plugins.txt — plain filenames, NO asterisk prefix
+    plugins_path = data_dir / "Plugins.txt"
+    lines = []
+    for plugin in ordered:
+        lines.append(f"{plugin}\n")
+
+    plugins_path.write_text("".join(lines))
+    return plugins_path, ordered
+
+
+def backup_existing_mods(game_path: Path) -> Optional[Path]:
+    """
+    Create a backup of existing mod files before CHIM install.
+    Returns backup directory path, or None if nothing to back up.
+    """
+    from datetime import datetime
+
+    data_dir = game_path / "OblivionRemastered" / "Content" / "Dev" / "ObvData" / "Data"
+    paks_dir = game_path / "OblivionRemastered" / "Content" / "Paks" / "~mods"
+    obse_dir = game_path / "OblivionRemastered" / "Binaries" / "Win64" / "OBSE" / "Plugins"
+    ue4ss_root = game_path / "OblivionRemastered" / "Binaries" / "Win64" / "ue4ss"
+
+    # Check if there's anything to back up
+    has_files = False
+    for d in [data_dir, paks_dir, obse_dir, ue4ss_root]:
+        if d.is_dir() and any(d.iterdir()):
+            has_files = True
+            break
+
+    if not has_files:
+        return None
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_dir = game_path / f"CHIM_backup_{timestamp}"
+    backup_dir.mkdir(parents=True, exist_ok=True)
+
+    for label, src_dir in [("Data", data_dir), ("Paks_mods", paks_dir),
+                           ("OBSE_Plugins", obse_dir), ("UE4SS", ue4ss_root)]:
+        if not src_dir.is_dir():
+            continue
+        dest = backup_dir / label
+        dest.mkdir(parents=True, exist_ok=True)
+        for f in src_dir.iterdir():
+            if f.is_file():
+                shutil.copy2(f, dest / f.name)
+            elif f.is_dir():
+                shutil.copytree(f, dest / f.name, dirs_exist_ok=True)
+
+    return backup_dir
+
+
+def verify_installation(installed_mods: list[dict], game_path: Path) -> tuple[list[str], list[str]]:
+    """
+    Post-install verification: check that all mod files actually landed.
+    Returns (successes, failures).
+    """
+    data_dir = game_path / "OblivionRemastered" / "Content" / "Dev" / "ObvData" / "Data"
+    paks_dir = game_path / "OblivionRemastered" / "Content" / "Paks" / "~mods"
+    obse_dir = game_path / "OblivionRemastered" / "Binaries" / "Win64" / "OBSE" / "Plugins"
+    ue4ss_dir = game_path / "OblivionRemastered" / "Binaries" / "Win64" / "ue4ss" / "Mods"
+    bin_dir = game_path / "OblivionRemastered" / "Binaries" / "Win64"
+
+    successes = []
+    failures = []
+
+    for mod in installed_mods:
+        mod_type = mod["type"]
+        name = mod["name"]
+
+        if mod_type == "esp":
+            esp_name = mod.get("esp_name")
+            if esp_name:
+                if (data_dir / esp_name).is_file():
+                    successes.append(f"{name}: {esp_name} found in Data/")
+                else:
+                    # Check if ANY .esp from this mod exists (name might differ)
+                    found = any(f.suffix.lower() in (".esp", ".esm") for f in data_dir.iterdir() if f.is_file())
+                    if found:
+                        successes.append(f"{name}: ESP found in Data/ (name may differ from expected)")
+                    else:
+                        failures.append(f"{name}: expected {esp_name} in Data/ — NOT FOUND")
+            else:
+                # No esp_name defined, just check data_dir has files
+                successes.append(f"{name}: no specific ESP name to verify")
+
+        elif mod_type == "pak":
+            # Check for any .pak files in ~mods
+            if paks_dir.is_dir() and any(f.suffix.lower() == ".pak" for f in paks_dir.iterdir() if f.is_file()):
+                successes.append(f"{name}: PAK files present in ~mods/")
+            else:
+                failures.append(f"{name}: no PAK files found in ~mods/")
+
+        elif mod_type == "obse":
+            if obse_dir.is_dir() and any(f.suffix.lower() == ".dll" for f in obse_dir.iterdir() if f.is_file()):
+                successes.append(f"{name}: DLL files present in OBSE/Plugins/")
+            else:
+                failures.append(f"{name}: no DLL files found in OBSE/Plugins/")
+
+        elif mod_type == "obse_framework":
+            obse_loader = bin_dir / "obse64_loader.exe"
+            if obse_loader.is_file():
+                successes.append(f"{name}: obse64_loader.exe found")
+            else:
+                failures.append(f"{name}: obse64_loader.exe NOT FOUND in Binaries/Win64/")
+
+        elif mod_type == "ue4ss_framework":
+            # UE4SS for Oblivion Remastered uses dwmapi.dll as proxy loader
+            # and keeps actual files in ue4ss/ subfolder
+            dwmapi = bin_dir / "dwmapi.dll"
+            ue4ss_dll = bin_dir / "ue4ss" / "UE4SS.dll"
+            ue4ss_alt = bin_dir / "UE4SS.dll"
+            xinput = bin_dir / "xinput1_3.dll"
+            if dwmapi.is_file() or ue4ss_dll.is_file() or ue4ss_alt.is_file() or xinput.is_file():
+                successes.append(f"{name}: UE4SS framework files found")
+            else:
+                failures.append(f"{name}: UE4SS framework NOT FOUND in Binaries/Win64/")
+
+        elif mod_type == "ue4ss":
+            folder_name = mod.get("ue4ss_folder", name.replace(" ", ""))
+            mod_dir = ue4ss_dir / folder_name
+            enabled = mod_dir / "enabled.txt"
+            is_optional = mod.get("optional", False)
+            if mod_dir.is_dir():
+                if is_optional:
+                    # Optional mods have enabled.txt intentionally deleted
+                    successes.append(f"{name}: folder '{folder_name}' found (optional, disabled by default)")
+                elif enabled.is_file():
+                    successes.append(f"{name}: folder '{folder_name}' found + enabled")
+                else:
+                    failures.append(f"{name}: folder '{folder_name}' exists but missing enabled.txt")
+            else:
+                failures.append(f"{name}: folder '{folder_name}' NOT FOUND in ue4ss/Mods/")
+
+        elif mod_type == "config":
+            successes.append(f"{name}: config mod (verified during deploy)")
+
+        elif mod_type == "obse_config":
+            if obse_dir.is_dir() and any(f.suffix.lower() in (".json", ".ini") for f in obse_dir.iterdir() if f.is_file()):
+                successes.append(f"{name}: config files found in OBSE/Plugins/")
+            else:
+                failures.append(f"{name}: no config files found in OBSE/Plugins/")
+
+    return successes, failures
 
 
 def classify_and_install_files(
@@ -418,23 +933,50 @@ def classify_and_install_files(
         return installed, errors
 
     if mod_type == "ue4ss_framework":
-        # UE4SS framework: copy everything to Binaries/Win64/ preserving structure
+        # UE4SS framework: proxy DLL goes to Binaries/Win64/, everything else
+        # goes to Binaries/Win64/ue4ss/ preserving structure.
+        # IMPORTANT: Skip bundled mod folders — they conflict with built-in UE4SS modules
+        PROXY_DLLS = {"winmm.dll", "dwmapi.dll", "xinput1_3.dll", "xinput9_1_0.dll"}
+        SKIP_MOD_FOLDERS = {"bpml_genericfunctions", "bpmodloadermod"}
+
         # Find root (may have a wrapper folder)
         root = extracted_dir
         subdirs = [d for d in extracted_dir.iterdir() if d.is_dir()]
-        # If there's exactly one subfolder and no loose important files, unwrap
         loose_files = [f for f in extracted_dir.iterdir() if f.is_file() and f.suffix.lower() in (".dll", ".exe", ".ini")]
         if len(subdirs) == 1 and not loose_files:
             root = subdirs[0]
+
+        ue4ss_dest = bin_dir / "ue4ss"
+        ue4ss_dest.mkdir(parents=True, exist_ok=True)
 
         for f in root.rglob("*"):
             if not f.is_file():
                 continue
             rel = f.relative_to(root)
-            dest = bin_dir / rel
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(f, dest)
-            installed += 1
+            parts = rel.parts
+            parts_lower = [p.lower() for p in parts]
+
+            # Skip bundled framework mod folders (conflict with built-in)
+            if any(skip in parts_lower for skip in SKIP_MOD_FOLDERS):
+                continue
+
+            if f.name.lower() in PROXY_DLLS:
+                # Proxy DLL goes to Binaries/Win64/ root
+                dest = bin_dir / f.name
+                shutil.copy2(f, dest)
+                installed += 1
+            elif len(parts) >= 2 and parts[0].lower() == "ue4ss":
+                # Already in a ue4ss/ subfolder — preserve relative path
+                dest = bin_dir / rel
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(f, dest)
+                installed += 1
+            else:
+                # Everything else (UE4SS.dll, settings, Mods/) goes to ue4ss/
+                dest = ue4ss_dest / rel
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(f, dest)
+                installed += 1
         return installed, errors
 
     # For standard mod types, find the "real" root of extracted content
@@ -452,12 +994,27 @@ def classify_and_install_files(
     all_files = [f for f in content_root.rglob("*") if f.is_file()]
 
     if mod_type == "esp":
+        # Find the expected ESP name if defined
+        expected_esp = None
+        for m in MODS + DECK_OPTIMIZATION_MODS:
+            if m["name"] == mod_name:
+                expected_esp = m.get("esp_name")
+                break
+
         for f in all_files:
             ext = f.suffix.lower()
             if ext in (".esp", ".esm"):
-                dest = data_dir / f.name
-                shutil.copy2(f, dest)
-                installed += 1
+                # If we know the expected ESP name, only install that one
+                # (prevents patch ESPs for other mods from being installed)
+                if expected_esp:
+                    if f.name == expected_esp:
+                        dest = data_dir / f.name
+                        shutil.copy2(f, dest)
+                        installed += 1
+                else:
+                    dest = data_dir / f.name
+                    shutil.copy2(f, dest)
+                    installed += 1
             elif ext == ".bsa":
                 dest = data_dir / f.name
                 shutil.copy2(f, dest)
@@ -467,23 +1024,48 @@ def classify_and_install_files(
                 dest = data_dir / f.name
                 shutil.copy2(f, dest)
                 installed += 1
-
-    elif mod_type == "pak":
-        for f in all_files:
-            ext = f.suffix.lower()
-            if ext in (".pak", ".ucas", ".utoc"):
-                dest = paks_dir / f.name
+            elif ext in (".json",):
+                # JSON configs (e.g. MagicLoader) — preserve subfolder structure under Data
+                rel = f.relative_to(content_root)
+                # Find the "Data" part in the path and keep everything after
+                rel_str = str(rel)
+                data_idx = rel_str.lower().find("data")
+                if data_idx >= 0:
+                    after = rel_str[data_idx + 4:].lstrip("/\\")
+                    dest = data_dir / after if after else data_dir / f.name
+                else:
+                    dest = data_dir / f.name
+                dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(f, dest)
                 installed += 1
-            elif ext in (".esp", ".esm"):
+
+    elif mod_type == "pak":
+        # PAK files are deployed from patches/ (tested versions).
+        # From Nexus archives we only extract ESPs, JSONs, and other non-PAK content.
+        for f in all_files:
+            ext = f.suffix.lower()
+            if ext in (".esp", ".esm"):
                 dest = data_dir / f.name
+                shutil.copy2(f, dest)
+                installed += 1
+            elif ext == ".json":
+                # MagicLoader configs and similar — preserve relative path under Data/
+                rel = f.relative_to(content_root)
+                rel_str = str(rel)
+                # Route MagicLoader files to Data/MagicLoader/
+                if "magicloader" in rel_str.lower():
+                    magic_dir = data_dir / "MagicLoader"
+                    magic_dir.mkdir(parents=True, exist_ok=True)
+                    dest = magic_dir / f.name
+                else:
+                    dest = data_dir / f.name
                 shutil.copy2(f, dest)
                 installed += 1
 
     elif mod_type == "obse":
         for f in all_files:
             ext = f.suffix.lower()
-            if ext in (".dll", ".ini"):
+            if ext in (".dll", ".ini", ".bin", ".pdb"):
                 dest = obse_dir / f.name
                 shutil.copy2(f, dest)
                 installed += 1
@@ -493,52 +1075,163 @@ def classify_and_install_files(
                 installed += 1
 
     elif mod_type == "ue4ss":
-        # UE4SS mods go into ue4ss/Mods/<ModName>/
-        mod_dir = ue4ss_mods_dir / mod_name.replace(" ", "")
+        # UE4SS mods — many archives bundle full game paths or the entire UE4SS framework.
+        # Strategy: walk ALL extracted files, detect game-path patterns, route each file.
+        folder_name = None
+        archive_folders = None
+        is_optional = False
+        no_enabled = False
+        for m in MODS + DECK_OPTIMIZATION_MODS:
+            if m["name"] == mod_name:
+                folder_name = m.get("ue4ss_folder")
+                archive_folders = m.get("archive_ue4ss_folders")
+                is_optional = m.get("optional", False)
+                no_enabled = m.get("no_enabled_txt", False)
+                break
+        if not folder_name:
+            folder_name = mod_name.replace(" ", "")
+
+        # Build set of folder names to extract from archives
+        target_folders = {folder_name}
+        if archive_folders:
+            target_folders.update(archive_folders)
+
+        mod_dir = ue4ss_mods_dir / folder_name
         mod_dir.mkdir(parents=True, exist_ok=True)
 
-        # Check if extracted content already has the expected UE4SS structure
-        # (contains scripts/ or dlls/ or a main.lua or enabled.txt)
-        has_structure = any(
-            f.name.lower() in ("main.lua", "enabled.txt") or
-            f.parent.name.lower() in ("scripts", "dlls")
-            for f in all_files
+        # Use ALL files from extracted_dir (not content_root) to preserve full paths
+        all_extracted = [f for f in extracted_dir.rglob("*") if f.is_file()]
+
+        # Detect if this archive has a game-path structure
+        has_game_path = any(
+            "ue4ss" in str(f.relative_to(extracted_dir)).lower() and
+            "mods" in str(f.relative_to(extracted_dir)).lower()
+            for f in all_extracted
         )
 
-        for f in all_files:
-            ext = f.suffix.lower()
-            rel = f.relative_to(content_root)
+        if has_game_path:
+            # Archive contains game-path structure — route files by path patterns
+            for f in all_extracted:
+                rel_str = str(f.relative_to(extracted_dir))
+                rel_lower = rel_str.lower()
 
-            if ext in (".esp", ".esm"):
-                dest = data_dir / f.name
-                shutil.copy2(f, dest)
-                installed += 1
-            elif ext in (".pak", ".ucas", ".utoc"):
-                dest = paks_dir / f.name
-                shutil.copy2(f, dest)
-                installed += 1
-            else:
-                if has_structure:
-                    dest = mod_dir / rel
+                # Skip bundled UE4SS framework files (we have our own)
+                fname_lower = f.name.lower()
+                if fname_lower in ("ue4ss.dll", "ue4ss-settings.ini", "ue4ss.pdb",
+                                   "dwmapi.dll", "winmm.dll", "xinput1_3.dll"):
+                    continue
+                # Skip bundled framework mod folders
+                parts_lower = [p.lower() for p in Path(rel_str).parts]
+                if any(skip in parts_lower for skip in ("bpml_genericfunctions", "bpmodloadermod", "shared")):
+                    continue
+
+                # Route ESPs
+                if f.suffix.lower() in (".esp", ".esm"):
+                    dest = data_dir / f.name
+                    shutil.copy2(f, dest)
+                    installed += 1
+                # Route PAKs
+                elif f.suffix.lower() in (".pak", ".ucas", ".utoc"):
+                    dest = paks_dir / f.name
+                    shutil.copy2(f, dest)
+                    installed += 1
+                # Route UE4SS mod files — find files under a target folder name
+                elif any(tf.lower() in parts_lower for tf in target_folders):
+                    # Find which target folder this belongs to and extract relative path within it
+                    for tf in target_folders:
+                        tf_idx = None
+                        for i, part in enumerate(Path(rel_str).parts):
+                            if part.lower() == tf.lower():
+                                tf_idx = i
+                                break
+                        if tf_idx is not None:
+                            inner_rel = Path(*Path(rel_str).parts[tf_idx + 1:])
+                            # Map all archive folders into the single target folder
+                            dest = mod_dir / inner_rel
+                            dest.parent.mkdir(parents=True, exist_ok=True)
+                            shutil.copy2(f, dest)
+                            installed += 1
+                            break
+                # Route other files (configs like MadConfigs/) to bin_dir preserving structure
+                elif f.suffix.lower() in (".ini", ".cfg", ".json", ".txt"):
+                    # Try to find a reasonable relative path from Binaries/Win64/
+                    if "win64" in rel_lower:
+                        idx = parts_lower.index("win64")
+                        after = Path(*Path(rel_str).parts[idx + 1:])
+                        # Skip if it's in ue4ss/Mods for a folder we don't want
+                        if "ue4ss" not in str(after).lower():
+                            dest = bin_dir / after
+                            dest.parent.mkdir(parents=True, exist_ok=True)
+                            shutil.copy2(f, dest)
+                            installed += 1
+        else:
+            # Simple archive — no game paths, use content_root approach
+            has_structure = any(
+                f.name.lower() in ("main.lua", "enabled.txt") or
+                f.parent.name.lower() in ("scripts", "dlls")
+                for f in all_files
+            )
+
+            for f in all_files:
+                ext = f.suffix.lower()
+                rel = f.relative_to(content_root)
+
+                if ext in (".esp", ".esm"):
+                    dest = data_dir / f.name
+                    shutil.copy2(f, dest)
+                    installed += 1
+                elif ext in (".pak", ".ucas", ".utoc"):
+                    dest = paks_dir / f.name
+                    shutil.copy2(f, dest)
+                    installed += 1
                 else:
-                    dest = mod_dir / f.name
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(f, dest)
-                installed += 1
+                    if has_structure:
+                        dest = mod_dir / rel
+                    else:
+                        dest = mod_dir / f.name
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(f, dest)
+                    installed += 1
 
-        # Ensure enabled.txt exists
+        # Set enabled.txt — data mods and optional mods should NOT have it
         enabled = mod_dir / "enabled.txt"
-        if not enabled.exists():
+        if no_enabled or is_optional:
+            if enabled.exists():
+                enabled.unlink()
+        else:
             enabled.write_text("1\n")
 
+    elif mod_type == "obse_config":
+        # OBSE plugin config files (JSON/INI) — go to OBSE/Plugins/
+        obse_plugins_dir = game_path / "OblivionRemastered" / "Binaries" / "Win64" / "OBSE" / "Plugins"
+        obse_plugins_dir.mkdir(parents=True, exist_ok=True)
+        for f in all_files:
+            ext = f.suffix.lower()
+            if ext in (".json", ".ini", ".cfg", ".txt"):
+                dest = obse_plugins_dir / f.name
+                shutil.copy2(f, dest)
+                installed += 1
+
     elif mod_type == "config":
-        # Config/optimization mods — ini files go to various locations
+        # Config/optimization mods — route INIs to correct location
+        # Look up config_dest for this mod
+        config_dest = None
+        for m in MODS + DECK_OPTIMIZATION_MODS:
+            if m["name"] == mod_name:
+                config_dest = m.get("config_dest")
+                break
+
+        gamesettings_dir = game_path / "OblivionRemastered" / "Binaries" / "Win64" / "OBSE" / "Plugins" / "GameSettings"
+
         for f in all_files:
             ext = f.suffix.lower()
             name_lower = f.name.lower()
             if ext == ".ini":
-                if "engine" in name_lower:
-                    # Engine.ini goes to saved config dir (handled separately for Deck)
+                if config_dest == "gamesettings":
+                    # OBSE GameSettings INI (e.g. Harder Stealth)
+                    gamesettings_dir.mkdir(parents=True, exist_ok=True)
+                    dest = gamesettings_dir / f.name
+                elif "engine" in name_lower:
                     dest = bin_dir / f.name
                 elif "gameusersettings" in name_lower:
                     dest = bin_dir / f.name
@@ -566,13 +1259,18 @@ def classify_and_install_files(
 # ─── Custom Widgets ─────────────────────────────────────────────────────────────
 
 class GoldButton(tk.Canvas):
-    """A custom button with gold border, hover effects, and clean styling."""
+    """An ornate Elder Scrolls themed button with gold border and corner decorations."""
 
     def __init__(self, parent, text="", command=None, width=200, height=40,
                  font_size=11, enabled=True, accent=None, **kwargs):
+        # Detect parent bg color for seamless blending
+        try:
+            parent_bg = parent.cget("bg")
+        except Exception:
+            parent_bg = COLORS["bg"]
         super().__init__(
             parent, width=width, height=height,
-            bg=COLORS["bg"], highlightthickness=0, **kwargs,
+            bg=parent_bg, highlightthickness=0, **kwargs,
         )
         self._text = text
         self._command = command
@@ -583,6 +1281,7 @@ class GoldButton(tk.Canvas):
         self._hovered = False
         self._accent = accent or COLORS["gold"]
         self._accent_dim = accent or COLORS["gold_dim"]
+        self._parent_bg = parent_bg
 
         self.bind("<Enter>", self._on_enter)
         self.bind("<Leave>", self._on_leave)
@@ -594,19 +1293,29 @@ class GoldButton(tk.Canvas):
     def _draw(self):
         self.delete("all")
         w, h = self._width, self._height
-        r = 6  # corner radius
+        r = 3
 
         if self._enabled:
-            border_color = self._accent if self._hovered else self._accent_dim
-            fill = COLORS["btn_hover"] if self._hovered else COLORS["btn_bg"]
-            text_color = COLORS["text_bright"] if self._hovered else COLORS["text"]
+            if self._hovered:
+                border_color = self._accent
+                fill = COLORS["bg_warm"]
+                text_color = COLORS["gold_bright"]
+            else:
+                border_color = self._accent_dim
+                fill = COLORS["btn_bg"]
+                text_color = COLORS["text"]
         else:
             border_color = COLORS["border"]
             fill = COLORS["bg_light"]
             text_color = COLORS["text_dim"]
 
-        # Rounded rectangle via polygon
-        self._round_rect(2, 2, w - 2, h - 2, r, outline=border_color, fill=fill, width=1.5)
+        # Single clean border
+        self._round_rect(1, 1, w - 1, h - 1, r, outline=border_color, fill=fill, width=1.5)
+
+        # Subtle top highlight on hover
+        if self._enabled and self._hovered:
+            mid = w // 2
+            self.create_line(mid - 30, 2, mid + 30, 2, fill=self._accent, width=1)
 
         self.create_text(
             w // 2, h // 2, text=self._text,
@@ -660,9 +1369,9 @@ class GoldButton(tk.Canvas):
 
 
 class ProgressBar(tk.Canvas):
-    """Custom gold-themed progress bar."""
+    """Ornate Elder Scrolls themed progress bar with double border."""
 
-    def __init__(self, parent, width=700, height=22, **kwargs):
+    def __init__(self, parent, width=700, height=26, **kwargs):
         super().__init__(
             parent, width=width, height=height,
             bg=COLORS["bg"], highlightthickness=0, **kwargs,
@@ -675,20 +1384,25 @@ class ProgressBar(tk.Canvas):
     def _draw(self):
         self.delete("all")
         w, h = self._width, self._height
-        r = h // 2
+        r = 4
 
-        # Background track
-        self._round_rect(0, 0, w, h, r, fill=COLORS["progress_bg"], outline=COLORS["border"])
+        # Outer border
+        self._round_rect(0, 0, w, h, r, fill=COLORS["progress_bg"], outline=COLORS["gold_dim"], width=1)
+        # Inner border
+        self._round_rect(3, 3, w - 3, h - 3, r - 1, fill=COLORS["progress_bg"], outline=COLORS["border_gold"], width=0.5)
 
         # Filled portion
         if self._value > 0:
-            fw = max(h, int(w * self._value))
-            self._round_rect(0, 0, fw, h, r, fill=COLORS["progress_fg"], outline="")
+            fw = max(12, int((w - 6) * self._value))
+            self._round_rect(3, 3, fw + 3, h - 3, r - 1, fill=COLORS["progress_fg"], outline="")
+            # Gold shimmer highlight on filled portion
+            if fw > 20:
+                self.create_line(6, 6, fw, 6, fill=COLORS["gold_bright"], width=1)
 
         # Percentage text
         pct = int(self._value * 100)
         self.create_text(
-            w // 2, h // 2, text=f"{pct}%",
+            w // 2, h // 2, text=f"\u2726 {pct}% \u2726",
             fill=COLORS["text_bright"] if self._value > 0.4 else COLORS["text"],
             font=("Segoe UI", 9, "bold"),
         )
@@ -713,10 +1427,17 @@ class CHIMInstaller:
         self.root = tk.Tk()
         self.root.title("CHIM  —  Oblivion Remastered Modpack Installer")
         self.root.configure(bg=COLORS["bg"])
-        self.root.resizable(False, False)
+        self.root.resizable(True, True)
 
-        # Window size and centering
-        ww, wh = 800, 600
+        # Window size — adapt to screen, fit Steam Deck 1280x800
+        sw = self.root.winfo_screenwidth()
+        sh = self.root.winfo_screenheight()
+        if sh <= 800:
+            # Steam Deck or small screen
+            ww, wh = min(720, sw - 40), min(580, sh - 60)
+        else:
+            ww, wh = 800, 700
+        self.root.minsize(640, 480)
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
         x = (sw - ww) // 2
@@ -739,6 +1460,13 @@ class CHIMInstaller:
         # Initialize all mod statuses
         self._init_mod_status()
 
+        # Main container
+        self.container = tk.Frame(self.root, bg=COLORS["bg"])
+        self.container.pack(fill="both", expand=True)
+
+        # Start with welcome screen
+        self._show_welcome()
+
     def _init_mod_status(self):
         self.mod_status.clear()
         self.mod_files.clear()
@@ -755,13 +1483,6 @@ class CHIMInstaller:
         else:
             self.active_mods = list(MODS)
 
-        # Main container
-        self.container = tk.Frame(self.root, bg=COLORS["bg"])
-        self.container.pack(fill="both", expand=True)
-
-        # Start with welcome screen
-        self._show_welcome()
-
     def _clear_container(self):
         for w in self.container.winfo_children():
             w.destroy()
@@ -769,69 +1490,101 @@ class CHIMInstaller:
 
     def _make_label(self, parent, text, size=11, color=None, bold=False, **kwargs):
         weight = "bold" if bold else "normal"
+        font_family = "Cinzel" if bold and size >= 18 else "Segoe UI"
         return tk.Label(
             parent, text=text, bg=COLORS["bg"],
             fg=color or COLORS["text"],
-            font=("Segoe UI", size, weight),
+            font=(font_family, size, weight),
             **kwargs,
         )
 
     def _make_separator(self, parent):
-        sep = tk.Frame(parent, bg=COLORS["border"], height=1)
+        sep = tk.Frame(parent, bg=COLORS["border_gold"], height=1)
         sep.pack(fill="x", padx=40, pady=8)
         return sep
 
     # ─── Welcome Screen ────────────────────────────────────────────────────
+
+    def _make_ornament_line(self, parent, width=300):
+        """Draw an ornate horizontal divider with diamond center."""
+        c = tk.Canvas(parent, width=width, height=16, bg=COLORS["bg"], highlightthickness=0)
+        mid = width // 2
+        # Main line
+        c.create_line(20, 8, width - 20, 8, fill=COLORS["gold_dim"], width=1)
+        # Center diamond
+        c.create_polygon(mid, 2, mid + 6, 8, mid, 14, mid - 6, 8,
+                         fill=COLORS["gold_dim"], outline=COLORS["gold"])
+        # End caps
+        for x in [20, width - 20]:
+            c.create_oval(x - 2, 6, x + 2, 10, fill=COLORS["gold_dim"], outline="")
+        return c
 
     def _show_welcome(self):
         self._clear_container()
         frame = tk.Frame(self.container, bg=COLORS["bg"])
         frame.pack(expand=True)
 
-        # Title
-        tk.Label(
-            frame, text="C  H  I  M", bg=COLORS["bg"], fg=COLORS["gold"],
-            font=("Segoe UI", 42, "bold"),
-        ).pack(pady=(0, 4))
+        # Top ornament
+        self._make_ornament_line(frame, 500).pack(pady=(0, 50))
 
-        # Subtitle
-        tk.Label(
-            frame, text="Oblivion Remastered Modpack", bg=COLORS["bg"],
-            fg=COLORS["text_dim"], font=("Segoe UI", 14),
-        ).pack(pady=(0, 30))
-
-        # Horizontal gold line
-        line = tk.Frame(frame, bg=COLORS["gold_dim"], height=1, width=300)
-        line.pack(pady=(0, 30))
+        # Title with glow effect
+        title_canvas = tk.Canvas(frame, width=700, height=80, bg=COLORS["bg"], highlightthickness=0)
+        title_canvas.pack(pady=(0, 12))
+        # Outer glow
+        for ox, oy in [(-3,0),(3,0),(0,-3),(0,3),(-3,-3),(3,3),(3,-3),(-3,3),(-2,-2),(2,2)]:
+            title_canvas.create_text(350+ox, 40+oy, text="C   H   I   M",
+                fill="#3d2e10", font=("Cinzel", 56, "bold"))
+        # Inner glow
+        for ox, oy in [(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(1,1)]:
+            title_canvas.create_text(350+ox, 40+oy, text="C   H   I   M",
+                fill="#6a5020", font=("Cinzel", 56, "bold"))
+        # Actual title
+        title_canvas.create_text(350, 40, text="C   H   I   M",
+            fill=COLORS["gold"], font=("Cinzel", 56, "bold"))
 
         # Description
-        desc = (
-            "A curated collection of 59 mods for Oblivion Remastered.\n"
-            "Bug fixes, visual upgrades, combat overhaul, quality-of-life,\n"
-            "and new content  —  all tested for compatibility on Linux."
-        )
         tk.Label(
-            frame, text=desc, bg=COLORS["bg"], fg=COLORS["text"],
-            font=("Segoe UI", 11), justify="center",
+            frame, text="Oblivion Remastered Modpack", bg=COLORS["bg"],
+            fg="#e8e0d0", font=("Segoe UI", 14),
         ).pack(pady=(0, 10))
 
-        # Platform note
-        tk.Label(
-            frame, text="Works on Desktop Linux and Steam Deck (Desktop Mode)",
-            bg=COLORS["bg"], fg=COLORS["text_dim"], font=("Segoe UI", 9),
-        ).pack(pady=(0, 40))
+        # Glowing lore text
+        lore_text = "The Elder Scrolls secret syllable of royalty \u2014\nthe power to see through the dream and rewrite it."
+        lore_canvas = tk.Canvas(frame, width=600, height=56, bg=COLORS["bg"], highlightthickness=0)
+        lore_canvas.pack(pady=(0, 50))
+        # Outer glow
+        for ox, oy in [(-2,0),(2,0),(0,-2),(0,2),(-2,-2),(2,2),(2,-2),(-2,2)]:
+            lore_canvas.create_text(300+ox, 28+oy, text=lore_text,
+                fill="#3d3018", font=("Segoe UI", 11), justify="center")
+        # Inner glow
+        for ox, oy in [(-1,0),(1,0),(0,-1),(0,1)]:
+            lore_canvas.create_text(300+ox, 28+oy, text=lore_text,
+                fill="#5a4520", font=("Segoe UI", 11), justify="center")
+        # Actual text — warm orange offset from gold title
+        lore_canvas.create_text(300, 28, text=lore_text,
+            fill="#e07830", font=("Segoe UI", 11), justify="center")
+
+        # Center ornament
+        self._make_ornament_line(frame, 350).pack(pady=(0, 50))
 
         # Begin button
         GoldButton(
             frame, text="Begin Installation", command=self._show_profile,
-            width=240, height=46, font_size=13,
+            width=260, height=48, font_size=13,
         ).pack()
 
-        # Version
+        # Bottom ornament + version
+        self._make_ornament_line(frame, 250).pack(pady=(50, 10))
         tk.Label(
-            frame, text="v1.0", bg=COLORS["bg"], fg=COLORS["border"],
-            font=("Segoe UI", 9),
-        ).pack(side="bottom", pady=(30, 0))
+            frame, text="v1.3", bg=COLORS["bg"],
+            fg=COLORS["ornament"], font=("Segoe UI", 8),
+        ).pack()
+
+    def _animate_welcome(self):
+        """Fade in welcome screen elements."""
+        # Simple opacity simulation — we just delay showing elements
+        # tkinter doesn't support true alpha, but we can stagger reveals
+        pass  # The canvas draws instantly; animation is handled by the visual weight
 
     # ─── Profile Selection Screen ─────────────────────────────────────────
 
@@ -854,7 +1607,8 @@ class CHIMInstaller:
 
         tk.Label(pc_frame, text="CHIM  —  Full Experience", bg=COLORS["bg_light"],
                  fg=COLORS["gold"], font=("Segoe UI", 13, "bold")).pack(anchor="w")
-        tk.Label(pc_frame, text="59 mods. Max quality visuals, combat overhaul, AI improvements,\n"
+        pc_count = len(MODS)
+        tk.Label(pc_frame, text=f"{pc_count} mods. Max quality visuals, combat overhaul, AI improvements,\n"
                  "QoL, and new content. For desktop Linux PCs with a dedicated GPU.",
                  bg=COLORS["bg_light"], fg=COLORS["text_dim"], font=("Segoe UI", 9),
                  justify="left").pack(anchor="w", pady=(4, 8))
@@ -898,7 +1652,7 @@ class CHIMInstaller:
         self._clear_container()
 
         frame = tk.Frame(self.container, bg=COLORS["bg"])
-        frame.pack(fill="both", expand=True, padx=50, pady=30)
+        frame.pack(fill="both", expand=True, padx=30, pady=20)
 
         self._make_label(frame, "Game Location", size=22, color=COLORS["gold"], bold=True).pack(anchor="w", pady=(0, 6))
         self._make_label(
@@ -1039,6 +1793,25 @@ class CHIMInstaller:
         self._dl_progress = ProgressBar(prog_frame, width=740, height=20)
         self._dl_progress.pack()
 
+        # Nexus API auto-download row
+        api_frame = tk.Frame(frame, bg=COLORS["bg_light"], padx=10, pady=6)
+        api_frame.pack(fill="x", padx=30, pady=(0, 8))
+
+        self._api_status_lbl = self._make_label(api_frame, "", size=9, color=COLORS["text_dim"])
+        self._api_status_lbl.config(bg=COLORS["bg_light"])
+        self._api_status_lbl.pack(side="left", padx=(0, 8))
+
+        # Check for saved API key
+        saved_key = load_saved_api_key()
+        if saved_key:
+            self._api_status_lbl.config(text="Nexus API key saved \u2714", fg=COLORS["green"])
+
+        self._auto_dl_btn = GoldButton(
+            api_frame, text="Auto-Download All", command=self._prompt_api_key,
+            width=160, height=30, font_size=9,
+        )
+        self._auto_dl_btn.pack(side="right")
+
         # Mod list (scrollable)
         list_outer = tk.Frame(frame, bg=COLORS["border"], bd=1, relief="flat")
         list_outer.pack(fill="both", expand=True, padx=30, pady=(0, 10))
@@ -1107,9 +1880,14 @@ class CHIMInstaller:
             )
             status_lbl.pack(side="left", padx=(8, 0))
 
-            # Mod name
+            # Mod name (with optional warning)
+            display_name = mod["name"]
+            name_color = COLORS["text"]
+            if mod.get("optional"):
+                display_name = f"{mod['name']}  \u26a0"
+                name_color = COLORS["gold_dim"]
             name_lbl = tk.Label(
-                row, text=mod["name"], bg=bg, fg=COLORS["text"],
+                row, text=display_name, bg=bg, fg=name_color,
                 font=("Segoe UI", 10), anchor="w",
             )
             name_lbl.pack(side="left", fill="x", expand=True, padx=4, pady=3)
@@ -1295,6 +2073,154 @@ class CHIMInstaller:
 
         self._watcher_id = self.root.after(2000, self._poll_downloads)
 
+    # ─── Nexus API Auto-Download ─────────────────────────────────────────
+
+    def _prompt_api_key(self):
+        """Show a popup dialog for the API key, then start auto-download."""
+        saved_key = load_saved_api_key()
+
+        # If we have a saved key, use it directly
+        if saved_key:
+            self._api_status_lbl.config(text="Using saved API key...", fg=COLORS["gold"])
+            self._auto_dl_btn.set_enabled(False)
+            self.root.update_idletasks()
+            threading.Thread(target=self._run_auto_download, args=(saved_key,), daemon=True).start()
+            return
+
+        # Popup dialog
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Nexus API Key")
+        dialog.configure(bg=COLORS["bg"])
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        # Center on parent
+        dw, dh = 480, 200
+        x = self.root.winfo_x() + (self.root.winfo_width() - dw) // 2
+        y = self.root.winfo_y() + (self.root.winfo_height() - dh) // 2
+        dialog.geometry(f"{dw}x{dh}+{x}+{y}")
+
+        self._make_label(dialog, "Nexus Mods API Key", size=14, color=COLORS["gold"], bold=True).pack(pady=(20, 4))
+        self._make_label(dialog, "Premium required. Find your key at nexusmods.com \u2192 account settings.", size=9, color=COLORS["text_dim"]).pack(pady=(0, 12))
+
+        key_var = tk.StringVar()
+        entry = tk.Entry(
+            dialog, textvariable=key_var,
+            bg=COLORS["bg_lighter"], fg=COLORS["text"],
+            insertbackground=COLORS["gold"], font=("Segoe UI", 10),
+            relief="flat", bd=0, width=50,
+            highlightthickness=1, highlightcolor=COLORS["gold_dim"],
+            highlightbackground=COLORS["border"],
+        )
+        entry.pack(padx=30, ipady=8)
+        entry.focus_set()
+
+        btn_row = tk.Frame(dialog, bg=COLORS["bg"])
+        btn_row.pack(pady=(16, 20))
+
+        def on_ok():
+            api_key = key_var.get().strip()
+            if not api_key:
+                return
+            save_api_key(api_key)
+            dialog.destroy()
+            self._api_status_lbl.config(text="Validating key...", fg=COLORS["gold"])
+            self._auto_dl_btn.set_enabled(False)
+            self.root.update_idletasks()
+            threading.Thread(target=self._run_auto_download, args=(api_key,), daemon=True).start()
+
+        def on_cancel():
+            dialog.destroy()
+
+        GoldButton(btn_row, text="Download All", command=on_ok, width=140, height=36, font_size=10).pack(side="left", padx=(0, 10))
+        GoldButton(btn_row, text="Cancel", command=on_cancel, width=100, height=36, font_size=10).pack(side="left")
+
+        # Enter key triggers OK
+        dialog.bind("<Return>", lambda e: on_ok())
+
+    def _run_auto_download(self, api_key: str):
+        """Background thread: validate key, then download all pending mods."""
+        # Validate
+        valid, is_premium, username = nexus_api_validate_key(api_key)
+        if not valid:
+            self.root.after(0, lambda: self._api_status_lbl.config(
+                text="Invalid API key", fg=COLORS["red"]))
+            self.root.after(0, lambda: self._auto_dl_btn.set_enabled(True))
+            return
+
+        if not is_premium:
+            self.root.after(0, lambda: self._api_status_lbl.config(
+                text=f"Hi {username} — Premium required for auto-download", fg=COLORS["red"]))
+            self.root.after(0, lambda: self._auto_dl_btn.set_enabled(True))
+            return
+
+        self.root.after(0, lambda: self._api_status_lbl.config(
+            text=f"Premium \u2714  Downloading as {username}...", fg=COLORS["green"]))
+
+        # Download each pending mod
+        pending = [m for m in self.active_mods
+                   if self.mod_status[m["nexus_id"]] not in (STATUS_DOWNLOADED, STATUS_SKIPPED)]
+        total = len(pending)
+
+        for idx, mod in enumerate(pending):
+            nid = mod["nexus_id"]
+            name = mod["name"]
+
+            self.root.after(0, lambda n=name, i=idx: self._api_status_lbl.config(
+                text=f"[{i+1}/{total}] {n}...", fg=COLORS["gold"]))
+
+            # Get file list
+            files = nexus_api_get_mod_files(nid, api_key)
+            if not files:
+                self.root.after(0, lambda n=name: self._api_status_lbl.config(
+                    text=f"Failed to get files for {n}", fg=COLORS["red"]))
+                continue
+
+            # Pick main file
+            file_info = nexus_api_pick_main_file(files)
+            if not file_info:
+                continue
+
+            file_id = file_info["file_id"]
+            file_name = file_info.get("file_name", f"{nid}.zip")
+
+            # Get download URL
+            dl_url = nexus_api_get_download_url(nid, file_id, api_key)
+            if not dl_url:
+                self.root.after(0, lambda n=name: self._api_status_lbl.config(
+                    text=f"Failed to get download link for {n}", fg=COLORS["red"]))
+                continue
+
+            # Download to Downloads dir
+            dest = self.downloads_dir / file_name
+
+            def progress_cb(downloaded, total_bytes, mod_name=name, mod_idx=idx):
+                if total_bytes > 0:
+                    pct = int(downloaded / total_bytes * 100)
+                    self.root.after(0, lambda p=pct, n=mod_name, i=mod_idx: self._api_status_lbl.config(
+                        text=f"[{i+1}/{total}] {n}... {p}%", fg=COLORS["gold"]))
+
+            ok = nexus_api_download_file(dl_url, dest, progress_cb)
+            if ok:
+                self.mod_status[nid] = STATUS_DOWNLOADED
+                self.mod_files[nid] = dest
+                self.root.after(0, self._update_download_ui)
+            else:
+                self.root.after(0, lambda n=name: self._api_status_lbl.config(
+                    text=f"Download failed: {n}", fg=COLORS["red"]))
+
+            # Brief pause to avoid rate limiting (1 req/sec limit)
+            import time
+            time.sleep(1.0)
+
+        # Done
+        done = sum(1 for s in self.mod_status.values() if s in (STATUS_DOWNLOADED, STATUS_SKIPPED))
+        self.root.after(0, lambda d=done: self._api_status_lbl.config(
+            text=f"Auto-download complete — {d}/{len(self.active_mods)} ready", fg=COLORS["green"]))
+        self.root.after(0, lambda: self._auto_dl_btn.set_enabled(True))
+        self.root.after(0, self._update_download_ui)
+
     # ─── Verification Screen ──────────────────────────────────────────────
 
     def _show_verify(self):
@@ -1302,7 +2228,7 @@ class CHIMInstaller:
         self._clear_container()
 
         frame = tk.Frame(self.container, bg=COLORS["bg"])
-        frame.pack(fill="both", expand=True, padx=50, pady=30)
+        frame.pack(fill="both", expand=True, padx=30, pady=20)
 
         self._make_label(frame, "Verifying Mods", size=22, color=COLORS["gold"], bold=True).pack(anchor="w", pady=(0, 6))
         self._make_label(
@@ -1316,7 +2242,11 @@ class CHIMInstaller:
         self._verify_status = self._make_label(frame, "Starting verification...", size=11, color=COLORS["text"])
         self._verify_status.pack(anchor="w", pady=(0, 10))
 
-        # Log area
+        # Button frame — pack at bottom FIRST so it's always visible
+        self._verify_btn_frame = tk.Frame(frame, bg=COLORS["bg"])
+        self._verify_btn_frame.pack(side="bottom", fill="x", pady=(10, 0))
+
+        # Log area — fills remaining space
         log_frame = tk.Frame(frame, bg=COLORS["border"], bd=1, relief="flat")
         log_frame.pack(fill="both", expand=True, pady=(0, 10))
 
@@ -1340,9 +2270,6 @@ class CHIMInstaller:
         self._verify_log.tag_configure("red", foreground=COLORS["red"])
         self._verify_log.tag_configure("dim", foreground=COLORS["text_dim"])
         self._verify_log.tag_configure("blue", foreground=COLORS["blue"])
-
-        self._verify_btn_frame = tk.Frame(frame, bg=COLORS["bg"])
-        self._verify_btn_frame.pack(fill="x", pady=(10, 0))
 
         # Run verification in background
         threading.Thread(target=self._run_verify, daemon=True).start()
@@ -1436,11 +2363,12 @@ class CHIMInstaller:
             expected_map = {
                 "esp": {".esp", ".esm", ".bsa", ".ini"},
                 "pak": {".pak", ".ucas", ".utoc", ".esp", ".esm"},
-                "obse": {".dll", ".ini", ".esp", ".esm"},
+                "obse": {".dll", ".ini", ".esp", ".esm", ".bin", ".pdb"},
                 "obse_framework": {".dll", ".exe", ".ini"},
                 "ue4ss": {".lua", ".txt", ".ini", ".dll", ".json", ".pak", ".ucas", ".utoc", ".esp", ".esm"},
                 "ue4ss_framework": {".dll", ".ini", ".txt", ".lua", ".exe"},
                 "config": {".ini", ".txt", ".cfg", ".json"},
+                "obse_config": {".json", ".ini", ".cfg", ".txt", ".xml"},
             }
             expected = expected_map.get(mod["type"], set())
             relevant = extensions & expected
@@ -1449,11 +2377,14 @@ class CHIMInstaller:
                 self._vlog(f"  [{idx+1}/{total}] {mod['name']}: no expected files found (has: {', '.join(extensions)})", "red")
                 issues.append(f"{mod['name']}: archive doesn't contain expected file types for {mod['type']} mod")
             else:
-                # Check for file conflicts
+                # Check for file conflicts (skip known shared framework files)
+                shared_files = {"ue4ss.dll", "dwmapi.dll", "xinput1_3.dll", "ue4ss-settings.ini"}
                 for f in all_files:
                     ext = f.suffix.lower()
                     if ext in (".esp", ".esm", ".pak", ".ucas", ".utoc", ".dll"):
                         key = f.name.lower()
+                        if key in shared_files:
+                            continue
                         if key in dest_files and dest_files[key] != mod['name']:
                             self._vlog(f"  [{idx+1}/{total}] {mod['name']}: conflict — {f.name} also in {dest_files[key]}", "red")
                             warnings.append(f"File conflict: {f.name} exists in both {mod['name']} and {dest_files[key]}")
@@ -1542,7 +2473,7 @@ class CHIMInstaller:
         self._clear_container()
 
         frame = tk.Frame(self.container, bg=COLORS["bg"])
-        frame.pack(fill="both", expand=True, padx=50, pady=30)
+        frame.pack(fill="both", expand=True, padx=30, pady=20)
 
         self._make_label(frame, "Installing Mods", size=22, color=COLORS["gold"], bold=True).pack(anchor="w", pady=(0, 6))
         self._make_label(
@@ -1556,7 +2487,11 @@ class CHIMInstaller:
         self._install_status = self._make_label(frame, "Preparing...", size=11, color=COLORS["text"])
         self._install_status.pack(anchor="w", pady=(0, 10))
 
-        # Log area
+        # Button frame — pack at bottom FIRST so it's always visible
+        self._install_btn_frame = tk.Frame(frame, bg=COLORS["bg"])
+        self._install_btn_frame.pack(side="bottom", fill="x", pady=(10, 0))
+
+        # Log area — fills remaining space
         log_frame = tk.Frame(frame, bg=COLORS["border"], bd=1, relief="flat")
         log_frame.pack(fill="both", expand=True, pady=(0, 10))
 
@@ -1591,7 +2526,24 @@ class CHIMInstaller:
         self.root.after(0, _do)
 
     def _run_install(self):
+        try:
+            self._run_install_inner()
+        except Exception as e:
+            import traceback
+            print(f"INSTALL CRASHED: {e}", file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
+            self._log(f"FATAL ERROR: {e}", "red")
+
+    def _run_install_inner(self):
         game_path = Path(self.game_path)
+        bin_dir = game_path / "OblivionRemastered" / "Binaries" / "Win64"
+        data_dir = game_path / "OblivionRemastered" / "Content" / "Dev" / "ObvData" / "Data"
+        paks_dir = game_path / "OblivionRemastered" / "Content" / "Paks" / "~mods"
+        ue4ss_dir = bin_dir / "ue4ss"
+        ue4ss_mods_dir = ue4ss_dir / "Mods"
+        obse_dir = bin_dir / "OBSE" / "Plugins"
+        patches_base = Path(getattr(sys, '_MEIPASS', None) or Path(__file__).parent) / "patches"
+
         to_install = [m for m in self.active_mods if self.mod_status[m["nexus_id"]] == STATUS_DOWNLOADED]
         total = len(to_install)
 
@@ -1600,127 +2552,390 @@ class CHIMInstaller:
             self.root.after(1000, self._show_done)
             return
 
-        mode_label = "DRY RUN — " if self.dry_run else ""
-        profile_label = "CHIM Deck" if self.profile == PROFILE_DECK else "CHIM"
-        self._log(f"{mode_label}Installing {total} mods ({profile_label} profile) to:", "gold")
+        is_deck = self.profile == PROFILE_DECK
+        profile_label = "CHIM Deck" if is_deck else "CHIM"
+        self._log(f"Installing {total} mods ({profile_label}) to:", "gold")
         self._log(f"  {game_path}", "dim")
-        if self.dry_run:
-            self._log("  (Dry run — no files will be modified)", "blue")
         self._log("")
 
-        # Ensure mod directories exist (skip in dry run)
-        dirs = [
-            game_path / "OblivionRemastered" / "Content" / "Dev" / "ObvData" / "Data",
-            game_path / "OblivionRemastered" / "Content" / "Paks" / "~mods",
-            game_path / "OblivionRemastered" / "Binaries" / "Win64" / "OBSE" / "Plugins",
-            game_path / "OblivionRemastered" / "Binaries" / "Win64" / "ue4ss" / "Mods",
-        ]
-        if not self.dry_run:
-            for d in dirs:
-                d.mkdir(parents=True, exist_ok=True)
-
         errors_total = []
+        config_dir = self._find_saved_config_dir(game_path)
+        if not config_dir:
+            self._log("⚠ Run the game once before installing CHIM.", "red")
+            self._log("")
 
+        # ── Step 1: Backup ──
+        self._log("Step 1: Backup...", "gold")
+        self.root.after(0, lambda: self._install_status.config(text="Creating backup..."))
+        self.root.after(0, lambda: self._install_progress.set_value(0.03))
+        backup_path = backup_existing_mods(game_path)
+        if backup_path:
+            self._log(f"  → {backup_path.name}/", "green")
+            if config_dir and config_dir.is_dir():
+                cb = backup_path / "SavedConfig"
+                cb.mkdir(parents=True, exist_ok=True)
+                for f in config_dir.iterdir():
+                    if f.is_file():
+                        shutil.copy2(f, cb / f.name)
+        else:
+            self._log("  Clean install.", "dim")
+        self._log("")
+
+        # ── Step 2: Deploy frameworks from patches ──
+        self._log("Step 2: Deploying frameworks...", "gold")
+        self.root.after(0, lambda: self._install_status.config(text="Deploying OBSE + UE4SS..."))
+        self.root.after(0, lambda: self._install_progress.set_value(0.06))
+
+        for d in [data_dir, paks_dir, obse_dir, ue4ss_mods_dir]:
+            d.mkdir(parents=True, exist_ok=True)
+
+        # OBSE framework
+        obse_fw = patches_base / "obse_framework"
+        if obse_fw.is_dir():
+            for f in obse_fw.iterdir():
+                if f.is_file():
+                    shutil.copy2(f, bin_dir / f.name)
+            self._log(f"  ✔ OBSE framework", "green")
+
+        # OBSE plugins (bundled known-working versions)
+        obse_plugins_src = patches_base / "obse_plugins"
+        if obse_plugins_src.is_dir():
+            for f in obse_plugins_src.rglob("*"):
+                if f.is_file():
+                    rel = f.relative_to(obse_plugins_src)
+                    dest = obse_dir / rel
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(f, dest)
+            self._log(f"  ✔ OBSE plugins", "green")
+
+        # PAK files (bundled tested versions — Nexus "latest" has breaking changes)
+        paks_bundle = patches_base / "paks"
+        if paks_bundle.is_dir():
+            for f in paks_bundle.iterdir():
+                if f.is_file():
+                    shutil.copy2(f, paks_dir / f.name)
+            pak_count = sum(1 for f in paks_bundle.iterdir() if f.is_file() and f.suffix.lower() == ".pak")
+            self._log(f"  ✔ {pak_count} PAK files", "green")
+
+        # UE4SS framework
+        ue4ss_fw = patches_base / "ue4ss_framework"
+        if ue4ss_fw.is_dir():
+            for f in ue4ss_fw.iterdir():
+                if not f.is_file():
+                    continue
+                if f.name.lower() == "winmm.dll":
+                    shutil.copy2(f, bin_dir / f.name)
+                else:
+                    shutil.copy2(f, ue4ss_dir / f.name)
+            self._log(f"  ✔ UE4SS framework", "green")
+
+        # UE4SS shared/
+        shared_src = patches_base / "ue4ss_shared"
+        if shared_src.is_dir():
+            shared_dest = ue4ss_mods_dir / "shared"
+            shared_dest.mkdir(parents=True, exist_ok=True)
+            for f in shared_src.rglob("*"):
+                if f.is_file():
+                    rel = f.relative_to(shared_src)
+                    dest = shared_dest / rel
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(f, dest)
+            self._log(f"  ✔ UE4SS shared libs", "green")
+
+        # mods.txt
+        mods_txt_name = "mods_deck.txt" if is_deck else "mods.txt"
+        mods_txt_src = patches_base / mods_txt_name
+        if mods_txt_src.is_file():
+            shutil.copy2(mods_txt_src, ue4ss_mods_dir / "mods.txt")
+        self._log("")
+
+        # ── Step 3: Install mods from archives ──
+        self._log("Step 3: Installing mods...", "gold")
         for idx, mod in enumerate(to_install):
             nid = mod["nexus_id"]
             archive = self.mod_files[nid]
-            progress = (idx + 1) / total
+            progress = 0.10 + (idx + 1) / total * 0.55
 
             self.root.after(0, lambda p=progress: self._install_progress.set_value(p))
             self.root.after(0, lambda m=mod, i=idx: self._install_status.config(
                 text=f"[{i+1}/{total}]  {m['name']}"
             ))
 
-            self._log(f"[{idx+1}/{total}]  {mod['name']}", "gold")
+            self._log(f"  [{idx+1}/{total}] {mod['name']}", "gold")
 
             if not archive or not archive.exists():
-                self._log(f"  Archive not found, skipping.", "red")
+                self._log(f"    Missing archive", "red")
                 errors_total.append(f"{mod['name']}: archive missing")
                 continue
 
-            if self.dry_run:
-                self._log(f"  Would extract: {archive.name}", "dim")
-                self._log(f"  Would install as type: {mod['type']}", "dim")
-                import time; time.sleep(0.1)  # Brief pause so user can see progress
-                self._log(f"  [DRY RUN] OK", "green")
-                continue
-
-            # Extract to temp dir
             tmp_dir = Path(tempfile.mkdtemp(prefix="chim_"))
-            self._log(f"  Extracting {archive.name}...", "dim")
-
             ok = extract_archive(archive, tmp_dir)
             if not ok:
-                self._log(f"  FAILED to extract. Need p7zip or unrar?", "red")
+                self._log(f"    Extract failed", "red")
                 errors_total.append(f"{mod['name']}: extraction failed")
                 shutil.rmtree(tmp_dir, ignore_errors=True)
                 continue
 
-            # Install files
             installed, errs = classify_and_install_files(tmp_dir, game_path, mod["type"], mod["name"])
             if installed > 0:
-                self._log(f"  Installed {installed} file(s).", "green")
+                self._log(f"    {installed} file(s) ✔", "green")
             if errs:
                 for e in errs:
-                    self._log(f"  {e}", "red")
+                    self._log(f"    {e}", "red")
                 errors_total.extend(errs)
 
-            # Cleanup
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
         self._log("")
-        # Deploy CHIM Deck custom configs if Deck profile
-        if self.profile == PROFILE_DECK and not self.dry_run:
-            self._log("")
-            self._log("Deploying CHIM Deck optimized configs...", "gold")
-            config_dir = self._find_saved_config_dir(game_path)
-            if config_dir:
-                for ini_name, bundled_name in [("Engine.ini", "deck_engine.ini"), ("GameUserSettings.ini", "deck_gameusersettings.ini")]:
-                    src = self._find_bundled_file(bundled_name)
+
+        # ── Step 4: Apply mod patches + cleanup ──
+        self._log("Step 4: Patches + cleanup...", "gold")
+        self.root.after(0, lambda: self._install_status.config(text="Applying patches..."))
+        self.root.after(0, lambda: self._install_progress.set_value(0.70))
+
+        try:
+            # UE4SS mod patches (config overlays for EternalDarkness, LumenRemastered, etc.)
+            ue4ss_patches = patches_base / "ue4ss_mods"
+            if ue4ss_patches.is_dir():
+                for mod_dir in ue4ss_patches.iterdir():
+                    if not mod_dir.is_dir():
+                        continue
+                    dest_mod = ue4ss_mods_dir / mod_dir.name
+                    if not dest_mod.is_dir():
+                        continue
+                    for f in mod_dir.rglob("*"):
+                        if f.is_file():
+                            rel = f.relative_to(mod_dir)
+                            dest = dest_mod / rel
+                            dest.parent.mkdir(parents=True, exist_ok=True)
+                            shutil.copy2(f, dest)
+                    self._log(f"  ✔ {mod_dir.name} patched", "green")
+
+            # Cleanup: dwmapi.dll (some archives bundle it)
+            dwmapi = bin_dir / "dwmapi.dll"
+            if dwmapi.is_file():
+                dwmapi.unlink()
+
+            # Cleanup: BPML/BPModLoader real folders (built into UE4SS.dll)
+            for fw in ("BPML_GenericFunctions", "BPModLoaderMod"):
+                fw_dir = ue4ss_mods_dir / fw
+                if fw_dir.is_dir():
+                    shutil.rmtree(fw_dir)
+
+            # Cleanup: shared/ extras from Nexus archives
+            shared_dir = ue4ss_mods_dir / "shared"
+            for extra in ("jsbProfiler", "Types.lua"):
+                p = shared_dir / extra
+                if p.is_dir():
+                    shutil.rmtree(p)
+                elif p.is_file():
+                    p.unlink()
+
+            # Cleanup: junk files
+            for junk in ("obse64_readme.txt", "obse64_whatsnew.txt", "enchantmentdrain.log",
+                         "UltraPlusConfig.ini", "UltraPlus_version.txt", "UltraPlusConfig.default",
+                         "ShadersRevisedPreset.ini", "Readme_UE4SS.txt",
+                         "obr-achievementunblocker.log"):
+                p = bin_dir / junk
+                if p.is_file():
+                    p.unlink()
+            for junk_dir in ("MadConfigs", "src", "D3D12"):
+                p = bin_dir / junk_dir
+                if p.is_dir():
+                    shutil.rmtree(p)
+
+            # NPCAppearanceManager: data mod, no enabled.txt
+            npc_dir = ue4ss_mods_dir / "NPCAppearanceManager"
+            if npc_dir.is_dir():
+                npc_en = npc_dir / "enabled.txt"
+                if npc_en.exists():
+                    npc_en.unlink()
+
+            # UltraPlus symlink (skip on Deck — UltraPlus is excluded)
+            if not is_deck:
+                up_ext = ue4ss_mods_dir / "UltraPlusExtensions"
+                up_short = ue4ss_mods_dir / "UltraPlus"
+                if up_ext.is_dir() and not up_short.exists():
+                    import platform as _plat
+                    if _plat.system() == "Windows":
+                        shutil.copytree(up_ext, up_short, dirs_exist_ok=True)
+                    else:
+                        up_short.symlink_to("UltraPlusExtensions")
+                    self._log(f"  ✔ UltraPlus symlink", "green")
+
+            self._log(f"  ✔ Cleanup done", "green")
+        except Exception as e:
+            self._log(f"  Patch error: {e}", "red")
+            import traceback
+            self._log(f"  {traceback.format_exc()}", "red")
+
+        self._log("")
+
+        # ── Step 5: Deploy legacy ESPs + load order ──
+        self._log("Step 5: Load order...", "gold")
+        self.root.after(0, lambda: self._install_status.config(text="Generating load order..."))
+        self.root.after(0, lambda: self._install_progress.set_value(0.80))
+
+        # Deploy legacy ESPs (from mods that were in the original tested build)
+        legacy_dir = patches_base / "legacy_esps"
+        if legacy_dir.is_dir():
+            leg_count = 0
+            for f in legacy_dir.iterdir():
+                if f.is_file():
+                    shutil.copy2(f, data_dir / f.name)
+                    leg_count += 1
+            if leg_count:
+                self._log(f"  ✔ {leg_count} legacy files deployed", "green")
+
+        # Deploy bundled Plugins.txt (tested working format)
+        plugins_src = patches_base / "Plugins.txt"
+        if plugins_src.is_file():
+            shutil.copy2(plugins_src, data_dir / "Plugins.txt")
+            lines = [l.strip() for l in plugins_src.read_text().splitlines() if l.strip() and not l.startswith("#")]
+            self._log(f"  ✔ {len(lines)} plugins in load order", "green")
+        else:
+            # Fallback to generated
+            try:
+                plugins_path, ordered = build_load_order(to_install, game_path)
+                self._log(f"  ✔ {len(ordered)} plugins generated", "green")
+            except Exception as e:
+                self._log(f"  ✘ Failed: {e}", "red")
+                errors_total.append(f"Load order: {e}")
+
+        self._log("")
+
+        # ── Step 6: Deploy config ──
+        self._log("Step 6: Config...", "gold")
+        self.root.after(0, lambda: self._install_status.config(text="Deploying config..."))
+        self.root.after(0, lambda: self._install_progress.set_value(0.88))
+
+        if is_deck:
+            # Deck: deploy optimized configs (read-only so game can't overwrite)
+            deck_dir = patches_base / "deck"
+            if config_dir and deck_dir.is_dir():
+                for ini_name, src_name in [("Engine.ini", "deck_engine.ini"), ("GameUserSettings.ini", "deck_gameusersettings.ini")]:
+                    src = deck_dir / src_name
+                    if not src.is_file():
+                        src = self._find_bundled_file(src_name)  # fallback to project root
                     if src and src.is_file():
                         dest = config_dir / ini_name
-                        # Backup existing
                         if dest.exists():
-                            backup = dest.with_suffix(f".ini.backup_chim")
-                            shutil.copy2(dest, backup)
-                            self._log(f"  Backed up {ini_name} → {backup.name}", "dim")
+                            bk = dest.with_suffix(".ini.backup_chim")
+                            if not bk.exists():
+                                shutil.copy2(dest, bk)
                         shutil.copy2(src, dest)
-                        # Make read-only so game can't overwrite
                         dest.chmod(0o444)
-                        self._log(f"  Installed {ini_name} (read-only)", "green")
-                    else:
-                        self._log(f"  {bundled_name} not found in installer bundle", "red")
-                        errors_total.append(f"Missing bundled config: {bundled_name}")
-            else:
-                self._log("  Could not find saved config directory — deploy configs manually", "red")
-                errors_total.append("Config directory not found")
+                        self._log(f"  ✔ {ini_name} (Deck, read-only)", "green")
+        else:
+            # PC: deploy Engine.ini (writable — game needs to write to it)
+            engine_src = patches_base / "config" / "Engine.ini"
+            if engine_src.is_file() and config_dir:
+                dest = config_dir / "Engine.ini"
+                if dest.exists():
+                    bk = dest.with_suffix(".ini.pre_chim")
+                    if not bk.exists():
+                        shutil.copy2(dest, bk)
+                shutil.copy2(engine_src, dest)
+                dest.chmod(0o644)
+                self._log(f"  ✔ Engine.ini (writable)", "green")
+            elif not config_dir:
+                self._log(f"  ⚠ Config dir not found", "red")
 
+        self._log("")
+
+        # ── Step 7: Launch options ──
+        self._log("Step 7: Launch options...", "gold")
+        self.root.after(0, lambda: self._install_status.config(text="Launch options..."))
+        self.root.after(0, lambda: self._install_progress.set_value(0.95))
+
+        config_path = find_steam_localconfig()
+        if config_path:
+            current = get_steam_launch_options(config_path, OBLIVION_APP_ID)
+            import platform
+            target_opts = LAUNCH_OPTIONS_WINDOWS if platform.system() == "Windows" else LAUNCH_OPTIONS_LINUX
+
+            if current and "obse64_loader" in current:
+                self._log(f"  Already set ✔", "green")
+            else:
+                def _copy_and_prompt():
+                    dlg = tk.Toplevel(self.root)
+                    dlg.title("Launch Options")
+                    dlg.configure(bg=COLORS["bg"])
+                    dlg.resizable(False, False)
+                    dlg.transient(self.root)
+                    dlg.grab_set()
+                    dw, dh = 620, 340
+                    x = self.root.winfo_x() + (self.root.winfo_width() - dw) // 2
+                    y = self.root.winfo_y() + (self.root.winfo_height() - dh) // 2
+                    dlg.geometry(f"{dw}x{dh}+{x}+{y}")
+                    self._make_label(dlg, "One Last Step", size=18, color=COLORS["gold"], bold=True).pack(pady=(20, 8))
+                    self._make_label(dlg, "Copy the launch options below and paste them in Steam:", size=10, color=COLORS["text_dim"]).pack(pady=(0, 8))
+                    self._make_label(dlg, "Right-click game \u2192 Properties \u2192 Launch Options \u2192 Paste", size=10, color=COLORS["text"]).pack(pady=(0, 12))
+                    text_frame = tk.Frame(dlg, bg=COLORS["border_gold"], padx=1, pady=1)
+                    text_frame.pack(fill="x", padx=30, pady=(0, 12))
+                    launch_text = tk.Text(text_frame, height=3, wrap="word", bg=COLORS["bg_light"], fg=COLORS["gold_bright"], font=("Consolas", 9), insertbackground=COLORS["gold"], selectbackground=COLORS["gold_dim"], selectforeground=COLORS["text_bright"], relief="flat", padx=8, pady=6)
+                    launch_text.pack(fill="x")
+                    launch_text.insert("1.0", target_opts)
+                    launch_text.tag_add("sel", "1.0", "end")
+                    launch_text.focus_set()
+                    def _copy_to_clipboard():
+                        self.root.clipboard_clear()
+                        self.root.clipboard_append(target_opts)
+                        self.root.update()
+                        copy_btn.set_text("\u2714 Copied!")
+                    btn_frame_dlg = tk.Frame(dlg, bg=COLORS["bg"])
+                    btn_frame_dlg.pack(pady=(4, 0))
+                    copy_btn = GoldButton(btn_frame_dlg, text="Copy to Clipboard", command=_copy_to_clipboard, width=170, height=38, font_size=10)
+                    copy_btn.pack(side="left", padx=(0, 12))
+                    def on_done():
+                        dlg.destroy()
+                        self._log(f"  Launch options shown ✔", "green")
+                    GoldButton(btn_frame_dlg, text="Done", command=on_done, width=100, height=38, font_size=10).pack(side="left")
+                self.root.after(0, _copy_and_prompt)
+
+        self.root.after(0, lambda: self._install_progress.set_value(1.0))
+        self._log("")
         if errors_total:
             self._log(f"Completed with {len(errors_total)} warning(s).", "gold")
         else:
             self._log("All mods installed successfully.", "green")
-
         self.root.after(0, lambda: self._install_status.config(text="Installation complete."))
 
         # Show Done button
         self.root.after(500, self._add_done_button)
 
     def _find_saved_config_dir(self, game_path: Path) -> Optional[Path]:
-        """Find the Proton/Wine saved config directory for Oblivion Remastered."""
-        # Standard Proton compatdata path
-        candidates = [
-            Path.home() / ".local/share/Steam/steamapps/compatdata/2623190/pfx/drive_c/users/steamuser/Documents/My Games/Oblivion Remastered/Saved/Config/Windows",
-            Path("/home/deck/.local/share/Steam/steamapps/compatdata/2623190/pfx/drive_c/users/steamuser/Documents/My Games/Oblivion Remastered/Saved/Config/Windows"),
-            Path.home() / ".var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/compatdata/2623190/pfx/drive_c/users/steamuser/Documents/My Games/Oblivion Remastered/Saved/Config/Windows",
-        ]
+        """Find the saved config directory for Oblivion Remastered (Linux/Proton/Windows)."""
+        import platform as _plat
+        candidates = []
+
+        if _plat.system() == "Windows":
+            # Windows native: %LOCALAPPDATA%/OblivionRemastered/Saved/Config/Windows
+            local = os.environ.get("LOCALAPPDATA", "")
+            if local:
+                candidates.append(Path(local) / "OblivionRemastered" / "Saved" / "Config" / "Windows")
+            # Also check Documents path
+            userprofile = os.environ.get("USERPROFILE", "")
+            if userprofile:
+                candidates.append(Path(userprofile) / "Documents" / "My Games" / "Oblivion Remastered" / "Saved" / "Config" / "Windows")
+        else:
+            # Linux / Steam Deck — Proton compatdata paths
+            candidates = [
+                Path.home() / ".local/share/Steam/steamapps/compatdata/2623190/pfx/drive_c/users/steamuser/Documents/My Games/Oblivion Remastered/Saved/Config/Windows",
+                Path("/home/deck/.local/share/Steam/steamapps/compatdata/2623190/pfx/drive_c/users/steamuser/Documents/My Games/Oblivion Remastered/Saved/Config/Windows"),
+                Path.home() / ".var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/compatdata/2623190/pfx/drive_c/users/steamuser/Documents/My Games/Oblivion Remastered/Saved/Config/Windows",
+            ]
+
         for c in candidates:
             if c.is_dir():
                 return c
-        # Try to find it by searching compatdata
-        for compat_root in [Path.home() / ".local/share/Steam/steamapps/compatdata", Path("/home/deck/.local/share/Steam/steamapps/compatdata")]:
-            config_path = compat_root / "2623190" / "pfx" / "drive_c" / "users" / "steamuser" / "Documents" / "My Games" / "Oblivion Remastered" / "Saved" / "Config" / "Windows"
-            if config_path.is_dir():
-                return config_path
+
+        # Fallback: search compatdata (Linux only)
+        if _plat.system() != "Windows":
+            for compat_root in [Path.home() / ".local/share/Steam/steamapps/compatdata", Path("/home/deck/.local/share/Steam/steamapps/compatdata")]:
+                config_path = compat_root / "2623190" / "pfx" / "drive_c" / "users" / "steamuser" / "Documents" / "My Games" / "Oblivion Remastered" / "Saved" / "Config" / "Windows"
+                if config_path.is_dir():
+                    return config_path
         return None
 
     def _find_bundled_file(self, filename: str) -> Optional[Path]:
@@ -1730,10 +2945,8 @@ class CHIMInstaller:
         return p if p.is_file() else None
 
     def _add_done_button(self):
-        btn_frame = tk.Frame(self.container, bg=COLORS["bg"])
-        btn_frame.pack(fill="x", padx=50, pady=(0, 15))
         GoldButton(
-            btn_frame, text="Continue  \u2192", command=self._show_done,
+            self._install_btn_frame, text="Continue  \u2192", command=self._show_done,
             width=140, height=40, font_size=11,
         ).pack(side="right")
 
@@ -1745,62 +2958,56 @@ class CHIMInstaller:
         frame = tk.Frame(self.container, bg=COLORS["bg"])
         frame.pack(expand=True)
 
-        # Gold line
-        tk.Frame(frame, bg=COLORS["gold_dim"], height=1, width=200).pack(pady=(0, 30))
+        # Top ornament
+        self._make_ornament_line(frame, 400).pack(pady=(0, 40))
 
         tk.Label(
-            frame, text="C H I M", bg=COLORS["bg"], fg=COLORS["gold"],
-            font=("Segoe UI", 36, "bold"),
-        ).pack(pady=(0, 20))
+            frame, text="C   H   I   M", bg=COLORS["bg"], fg=COLORS["gold"],
+            font=("Cinzel", 42, "bold"),
+        ).pack(pady=(0, 12))
 
         tk.Label(
             frame, text="has been installed.", bg=COLORS["bg"],
-            fg=COLORS["text"], font=("Segoe UI", 14),
+            fg="#e8e0d0", font=("Segoe UI", 16),
         ).pack(pady=(0, 30))
 
-        # Gold line
-        tk.Frame(frame, bg=COLORS["gold_dim"], height=1, width=200).pack(pady=(0, 30))
+        # Center ornament
+        self._make_ornament_line(frame, 300).pack(pady=(0, 30))
 
-        tk.Label(
-            frame, text="See the dream. Reshape it.", bg=COLORS["bg"],
-            fg=COLORS["gold_dim"], font=("Segoe UI", 12),
-            justify="center",
-        ).pack(pady=(0, 40))
+        # Status summary
+        status_frame = tk.Frame(frame, bg=COLORS["bg"])
+        status_frame.pack(pady=(0, 10))
 
-        # Tips — different for PC vs Deck
-        tips_frame = tk.Frame(frame, bg=COLORS["bg_light"], padx=20, pady=12)
-        tips_frame.pack(pady=(0, 30))
-
+        checks = [
+            ("\u2714  Mods installed", COLORS["green"]),
+            ("\u2714  Load order generated", COLORS["green"]),
+            ("\u2714  Launch options copied to clipboard", COLORS["green"]),
+        ]
         if self.profile == PROFILE_DECK:
-            tips_text = (
-                "STEAM DECK SETUP\n\n"
-                "1. Use Proton Experimental or GE-Proton 10-1+\n"
-                "2. Set Launch Options to:\n"
-                "   MANGOHUD=1 RADV_PERFTEST=gpl %command%\n\n"
-                "3. Quick Access Menu (... button):\n"
-                "   • Framerate Limit: 30 FPS\n"
-                "   • Refresh Rate: 40 Hz\n"
-                "   • Allow Tearing: Off\n"
-                "   • TDP Limit: 12-15W\n"
-                "   • GPU Clock: 1200 MHz\n\n"
-                "4. Game MUST be on Internal SSD (not SD card)\n"
-                "5. Only change graphics settings from the MAIN MENU\n"
-                "   (changing in-game causes crashes)"
-            )
-        else:
-            tips_text = (
-                "Launch Oblivion Remastered through Steam as usual.\n"
-                "CHIM is installed and ready to go.\n\n"
-                "If anything looks wrong, use the install log\n"
-                "to troubleshoot or report issues."
-            )
+            checks.append(("\u2714  Deck configs deployed", COLORS["green"]))
 
+        for text, color in checks:
+            tk.Label(status_frame, text=text, bg=COLORS["bg"], fg=color,
+                     font=("Segoe UI", 11)).pack(anchor="w")
+
+        # Deck-specific reminder (the one thing we can't auto-set)
+        if self.profile == PROFILE_DECK:
+            deck_frame = tk.Frame(frame, bg="#1a1408", padx=16, pady=12,
+                                  highlightbackground=COLORS["gold"], highlightthickness=1)
+            deck_frame.pack(fill="x", padx=40, pady=(20, 10))
+            tk.Label(deck_frame, text="Quick Access Menu (\u2022\u2022\u2022 button):",
+                     bg="#1a1408", fg=COLORS["gold"], font=("Segoe UI", 10, "bold")).pack(anchor="w")
+            tk.Label(deck_frame,
+                     text="30 FPS  |  40 Hz  |  Tearing Off  |  TDP 12-15W  |  GPU 1200 MHz",
+                     bg="#1a1408", fg=COLORS["gold_bright"], font=("Segoe UI", 10)).pack(anchor="w", pady=(4, 0))
+
+        # Ready message
         tk.Label(
-            tips_frame, text=tips_text,
-            bg=COLORS["bg_light"], fg=COLORS["text_dim"],
-            font=("Segoe UI", 9), justify="left",
-        ).pack()
+            frame, text="Launch the game through Steam and go.",
+            bg=COLORS["bg"], fg=COLORS["text_dim"], font=("Segoe UI", 10),
+        ).pack(pady=(20, 30))
 
+        # Buttons
         btn_frame = tk.Frame(frame, bg=COLORS["bg"])
         btn_frame.pack()
 
