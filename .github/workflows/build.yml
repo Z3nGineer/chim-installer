@@ -1,9 +1,8 @@
 name: Build CHIM Installer
 
 on:
-  push:
-    branches: [main]
-    tags: ['v*']
+  release:
+    types: [created]
   workflow_dispatch:
 
 jobs:
@@ -11,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -28,14 +29,23 @@ jobs:
           tar xf 7z.tar.xz 7zzs
           chmod +x 7zzs
 
-      - name: Build Linux executable
+      - name: Build Linux executable (onedir)
         run: |
-          pyinstaller --onefile --name CHIM_Installer --add-data "7zzs:." --add-data "deck_engine.ini:." --add-data "deck_gameusersettings.ini:." --windowed chim_installer.py
+          pyinstaller \
+            --noconfirm \
+            --onedir \
+            --name CHIM_Installer \
+            --add-data "patches:patches" \
+            --add-data "7zzs:." \
+            --add-data "deck_engine.ini:." \
+            --add-data "deck_gameusersettings.ini:." \
+            --windowed \
+            chim_installer.py
 
       - name: Create Linux tarball
         run: |
           cd dist
-          tar czf CHIM_Installer_Linux.tar.gz CHIM_Installer
+          tar czf CHIM_Installer_Linux.tar.gz CHIM_Installer/
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
@@ -47,6 +57,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -57,44 +69,49 @@ jobs:
         run: pip install pyinstaller
 
       - name: Download 7z for Windows
+        shell: powershell
         run: |
-          curl -L "https://www.7-zip.org/a/7z2409-extra.7z" -o 7z-extra.7z
+          Invoke-WebRequest -Uri "https://www.7-zip.org/a/7z2409-extra.7z" -OutFile "7z-extra.7z"
           7z x 7z-extra.7z 7za.exe -o.
-        shell: cmd
 
-      - name: Build Windows executable
+      - name: Build Windows executable (onedir)
         run: |
-          pyinstaller --onefile --name CHIM_Installer --add-data "7za.exe;." --add-data "deck_engine.ini;." --add-data "deck_gameusersettings.ini;." --windowed --icon=NONE chim_installer.py
+          pyinstaller --noconfirm --onedir --name CHIM_Installer --add-data "patches;patches" --add-data "7za.exe;." --add-data "deck_engine.ini;." --add-data "deck_gameusersettings.ini;." --windowed --icon=NONE chim_installer.py
+
+      - name: Create Windows zip
+        shell: powershell
+        run: |
+          Compress-Archive -Path "dist\CHIM_Installer" -DestinationPath "dist\CHIM_Installer_Windows.zip"
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: CHIM_Installer_Windows
-          path: dist/CHIM_Installer.exe
+          path: dist/CHIM_Installer_Windows.zip
 
   release:
     needs: [build-linux, build-windows]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'release'
     permissions:
       contents: write
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
 
-      - name: Create Release
+      - name: Upload assets to release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             CHIM_Installer_Linux/CHIM_Installer_Linux.tar.gz
-            CHIM_Installer_Windows/CHIM_Installer.exe
+            CHIM_Installer_Windows/CHIM_Installer_Windows.zip
           body: |
             ## CHIM Installer
 
-            **Windows:** Download `CHIM_Installer.exe` — double-click to run. No dependencies needed.
+            **Windows:** Download `CHIM_Installer_Windows.zip` — extract the folder and run `CHIM_Installer.exe`. No dependencies needed.
 
-            **Linux / Steam Deck:** Download `CHIM_Installer_Linux.tar.gz` — extract and double-click `CHIM_Installer`. No dependencies needed.
+            **Linux / Steam Deck:** Download `CHIM_Installer_Linux.tar.gz` — extract and run `./CHIM_Installer/CHIM_Installer`. No dependencies needed.
 
-            Both versions include bundled 7z extraction. Both auto-detect your game install path.
+            Both versions include the full patches directory (~370MB) and bundled 7z extraction.
           draft: false
           prerelease: false
