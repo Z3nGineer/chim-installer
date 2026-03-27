@@ -20,7 +20,6 @@ import threading
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from pathlib import Path
-from datetime import datetime
 from typing import Optional
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
@@ -32,95 +31,95 @@ MODS = [
     # OBSE64 (282), UE4SS (32), Address Library (4475), ActiveEffectsFix (4994),
     # Baka Achievement Enabler (145), No Enchantment Drain (1253) are ALL bundled
     # in patches/obse_framework/ and patches/obse_plugins/ — NOT downloaded from Nexus.
-    {"name": "Unofficial Oblivion Remastered Patch", "nexus_id": 477, "nexus_file_id": 17138, "type": "esp", "category": "Bug Fixes & Framework", "load_order": 1, "esp_name": "Unofficial Oblivion Remastered Patch.esp"},
-    {"name": "Oblivion Unreal Fixes", "nexus_id": 4676, "nexus_file_id": 19485, "type": "pak", "category": "Bug Fixes & Framework"},
+    {"name": "Unofficial Oblivion Remastered Patch", "nexus_id": 477, "type": "esp", "category": "Bug Fixes & Framework", "load_order": 1, "esp_name": "Unofficial Oblivion Remastered Patch.esp"},
+    {"name": "Oblivion Unreal Fixes", "nexus_id": 4676, "type": "pak", "category": "Bug Fixes & Framework"},
     # ActiveEffectsFix (4994) and Baka Achievement Enabler (145) — bundled in patches/obse_plugins/
-    {"name": "Difficulty Slider Fixed", "nexus_id": 58, "nexus_file_id": 998, "type": "esp", "category": "Bug Fixes & Framework", "load_order": 2, "esp_name": "Difficulty Slider Fixed.esp"},
-    {"name": "RainFPSFix", "nexus_id": 566, "nexus_file_id": 1008, "type": "esp", "category": "Bug Fixes & Framework", "load_order": 3, "esp_name": "RainFPSFix.esp"},
+    {"name": "Difficulty Slider Fixed", "nexus_id": 58, "type": "esp", "category": "Bug Fixes & Framework", "load_order": 2, "esp_name": "Difficulty Slider Fixed.esp"},
+    {"name": "RainFPSFix", "nexus_id": 566, "type": "esp", "category": "Bug Fixes & Framework", "load_order": 3, "esp_name": "RainFPSFix.esp"},
     # Visuals & Lighting
-    {"name": "Shaders Revised", "nexus_id": 1528, "nexus_file_id": 11034, "type": "ue4ss", "category": "Visuals & Lighting", "ue4ss_folder": "ShadersRevised"},
-    {"name": "Lumen Remastered", "nexus_id": 1129, "nexus_file_id": 8395, "type": "ue4ss", "category": "Visuals & Lighting", "ue4ss_folder": "LumenRemastered"},
-    {"name": "Lumiere", "nexus_id": 3100, "nexus_file_id": 19425, "type": "pak", "category": "Visuals & Lighting"},
-    {"name": "Eternal Darkness", "nexus_id": 5136, "nexus_file_id": 20597, "type": "ue4ss", "category": "Visuals & Lighting", "ue4ss_folder": "EternalDarkness"},
-    {"name": "Ultra Plus", "nexus_id": 27, "nexus_file_id": 21428, "type": "ue4ss", "category": "Visuals & Lighting", "ue4ss_folder": "UltraPlusExtensions"},
-    {"name": "Young Textures Revamped", "nexus_id": 445, "nexus_file_id": 3230, "type": "pak", "category": "Visuals & Lighting"},
-    {"name": "Greener Grass", "nexus_id": 2279, "nexus_file_id": 8505, "type": "pak", "category": "Visuals & Lighting"},
-    {"name": "Connor's Flora", "nexus_id": 4740, "nexus_file_id": 19351, "type": "pak", "category": "Visuals & Lighting"},
-    {"name": "NPC Overhaul AIO", "nexus_id": 3096, "nexus_file_id": 20244, "type": "ue4ss", "category": "Visuals & Lighting", "ue4ss_folder": "NPCAppearanceManager", "no_enabled_txt": True},
-    {"name": "8K Color World Map", "nexus_id": 944, "nexus_file_id": 7120, "type": "pak", "category": "Visuals & Lighting"},
-    {"name": "Brighter Torches 1.5x", "nexus_id": 2821, "nexus_file_id": 9189, "type": "pak", "category": "Visuals & Lighting"},
-    {"name": "Realistic HQ Skin", "nexus_id": 1284, "nexus_file_id": 3199, "type": "pak", "category": "Visuals & Lighting"},
-    {"name": "All Customization Options Unlocked", "nexus_id": 344, "nexus_file_id": 17678, "type": "pak", "category": "Visuals & Lighting"},
+    {"name": "Shaders Revised", "nexus_id": 1528, "type": "ue4ss", "category": "Visuals & Lighting", "ue4ss_folder": "ShadersRevised"},
+    {"name": "Lumen Remastered", "nexus_id": 1129, "type": "ue4ss", "category": "Visuals & Lighting", "ue4ss_folder": "LumenRemastered"},
+    {"name": "Lumiere", "nexus_id": 3100, "type": "pak", "category": "Visuals & Lighting"},
+    {"name": "Eternal Darkness", "nexus_id": 5136, "type": "ue4ss", "category": "Visuals & Lighting", "ue4ss_folder": "EternalDarkness"},
+    {"name": "Ultra Plus", "nexus_id": 27, "type": "ue4ss", "category": "Visuals & Lighting", "ue4ss_folder": "UltraPlusExtensions"},
+    {"name": "Young Textures Revamped", "nexus_id": 445, "type": "pak", "category": "Visuals & Lighting"},
+    {"name": "Greener Grass", "nexus_id": 2279, "type": "pak", "category": "Visuals & Lighting"},
+    {"name": "Connor's Flora", "nexus_id": 4740, "type": "pak", "category": "Visuals & Lighting"},
+    {"name": "NPC Overhaul AIO", "nexus_id": 3096, "type": "ue4ss", "category": "Visuals & Lighting", "ue4ss_folder": "NPCAppearanceManager", "no_enabled_txt": True},
+    {"name": "8K Color World Map", "nexus_id": 944, "type": "pak", "category": "Visuals & Lighting"},
+    {"name": "Brighter Torches 1.5x", "nexus_id": 2821, "type": "pak", "category": "Visuals & Lighting"},
+    {"name": "Realistic HQ Skin", "nexus_id": 1284, "type": "pak", "category": "Visuals & Lighting"},
+    {"name": "All Customization Options Unlocked", "nexus_id": 344, "type": "pak", "category": "Visuals & Lighting"},
     # Camera & Animations
-    {"name": "Improved Camera", "nexus_id": 2362, "nexus_file_id": 12494, "type": "pak", "category": "Camera & Animations"},
-    {"name": "Kei Animations - Legacy", "nexus_id": 4825, "nexus_file_id": 19092, "type": "pak", "category": "Camera & Animations"},
+    {"name": "Improved Camera", "nexus_id": 2362, "type": "pak", "category": "Camera & Animations"},
+    {"name": "Kei Animations - Legacy", "nexus_id": 4825, "type": "pak", "category": "Camera & Animations"},
     # Combat & Magic
-    {"name": "UltraCombat V2", "nexus_id": 4244, "nexus_file_id": 18038, "type": "ue4ss", "category": "Combat & Magic", "ue4ss_folder": "UltraCombat"},
-    {"name": "Responsive Combat AI", "nexus_id": 2792, "nexus_file_id": 11297, "type": "esp", "category": "Combat & Magic", "load_order": 20, "esp_name": "Responsive Combat AI.esp"},
-    {"name": "Responsive Spellcaster AI", "nexus_id": 5197, "nexus_file_id": 20888, "type": "esp", "category": "Combat & Magic", "load_order": 21, "esp_name": "Spellcaster Tweaks Base Game.esp"},
-    {"name": "Supreme Magicka", "nexus_id": 1098, "nexus_file_id": 19515, "type": "esp", "category": "Combat & Magic", "load_order": 22, "esp_name": "SupremeMagickaRemaster.esp"},
-    {"name": "Nascent Archery", "nexus_id": 2149, "nexus_file_id": 12550, "type": "esp", "category": "Combat & Magic", "load_order": 23, "esp_name": "Nascent - Archery Overhaul.esp"},
-    {"name": "Magic Skill Leveling Fixed", "nexus_id": 3965, "nexus_file_id": 15564, "type": "esp", "category": "Combat & Magic", "load_order": 24, "esp_name": "MagicSkillLevelingFixed.esp"},
-    {"name": "Way of the Fist", "nexus_id": 1323, "nexus_file_id": 5283, "type": "esp", "category": "Combat & Magic", "load_order": 25, "esp_name": "Way of the Strong Fist.esp"},
-    {"name": "Unique Elemental Spells", "nexus_id": 119, "nexus_file_id": 6115, "type": "esp", "category": "Combat & Magic", "load_order": 26, "esp_name": "Unique Elemental Spells.esp"},
-    {"name": "Engaging Combat", "nexus_id": 1812, "nexus_file_id": 19229, "type": "ue4ss", "category": "Combat & Magic", "ue4ss_folder": "EngagingCombat"},
+    {"name": "UltraCombat V2", "nexus_id": 4244, "type": "ue4ss", "category": "Combat & Magic", "ue4ss_folder": "UltraCombat"},
+    {"name": "Responsive Combat AI", "nexus_id": 2792, "type": "esp", "category": "Combat & Magic", "load_order": 20, "esp_name": "Responsive Combat AI.esp"},
+    {"name": "Responsive Spellcaster AI", "nexus_id": 5197, "type": "esp", "category": "Combat & Magic", "load_order": 21, "esp_name": "Spellcaster Tweaks Base Game.esp"},
+    {"name": "Supreme Magicka", "nexus_id": 1098, "type": "esp", "category": "Combat & Magic", "load_order": 22, "esp_name": "SupremeMagickaRemaster.esp"},
+    {"name": "Nascent Archery", "nexus_id": 2149, "type": "esp", "category": "Combat & Magic", "load_order": 23, "esp_name": "Nascent - Archery Overhaul.esp"},
+    {"name": "Magic Skill Leveling Fixed", "nexus_id": 3965, "type": "esp", "category": "Combat & Magic", "load_order": 24, "esp_name": "MagicSkillLevelingFixed.esp"},
+    {"name": "Way of the Fist", "nexus_id": 1323, "type": "esp", "category": "Combat & Magic", "load_order": 25, "esp_name": "Way of the Strong Fist.esp"},
+    {"name": "Unique Elemental Spells", "nexus_id": 119, "type": "esp", "category": "Combat & Magic", "load_order": 26, "esp_name": "Unique Elemental Spells.esp"},
+    {"name": "Engaging Combat", "nexus_id": 1812, "type": "ue4ss", "category": "Combat & Magic", "ue4ss_folder": "EngagingCombat"},
     # AI & World
-    {"name": "NPC and Faction Overhaul", "nexus_id": 5140, "nexus_file_id": 21253, "type": "esp", "category": "AI & World", "load_order": 30, "esp_name": "NPC & Faction Overhaul.esp"},
-    {"name": "Dynamic AI Animals", "nexus_id": 2228, "nexus_file_id": 8872, "type": "esp", "category": "AI & World", "load_order": 31, "esp_name": "DynamicAIBehaviorAnimals.esp"},
-    {"name": "Climates Revised", "nexus_id": 791, "nexus_file_id": 7649, "type": "esp", "category": "AI & World", "load_order": 32, "esp_name": "SSTClimatesRevised.esp"},
-    {"name": "Quest NPCs Run", "nexus_id": 219, "nexus_file_id": 14047, "type": "esp", "category": "AI & World", "load_order": 33, "esp_name": "Quest NPCs Run.esp"},
-    {"name": "Ultimate Dialogue Overhaul", "nexus_id": 5183, "nexus_file_id": 21946, "type": "esp", "category": "AI & World", "load_order": 35, "esp_name": "UltimateDialogueOverhaullastfinal8rdolast.esp"},
-    {"name": "NPCs Come to Life", "nexus_id": 3363, "nexus_file_id": 12899, "type": "esp", "category": "AI & World", "load_order": 37, "esp_name": "NaiadTravelers.esp"},
-    {"name": "Balanced NPC Level Cap", "nexus_id": 182, "nexus_file_id": 329, "type": "esp", "category": "AI & World", "load_order": 38, "esp_name": "Balanced NPC Level Cap.esp"},
+    {"name": "NPC and Faction Overhaul", "nexus_id": 5140, "type": "esp", "category": "AI & World", "load_order": 30, "esp_name": "NPC & Faction Overhaul.esp"},
+    {"name": "Dynamic AI Animals", "nexus_id": 2228, "type": "esp", "category": "AI & World", "load_order": 31, "esp_name": "DynamicAIBehaviorAnimals.esp"},
+    {"name": "Climates Revised", "nexus_id": 791, "type": "esp", "category": "AI & World", "load_order": 32, "esp_name": "SSTClimatesRevised.esp"},
+    {"name": "Quest NPCs Run", "nexus_id": 219, "type": "esp", "category": "AI & World", "load_order": 33, "esp_name": "Quest NPCs Run.esp"},
+    {"name": "Ultimate Dialogue Overhaul", "nexus_id": 5183, "type": "esp", "category": "AI & World", "load_order": 35, "esp_name": "UltimateDialogueOverhaullastfinal8rdolast.esp"},
+    {"name": "NPCs Come to Life", "nexus_id": 3363, "type": "esp", "category": "AI & World", "load_order": 37, "esp_name": "NaiadTravelers.esp"},
+    {"name": "Balanced NPC Level Cap", "nexus_id": 182, "type": "esp", "category": "AI & World", "load_order": 38, "esp_name": "Balanced NPC Level Cap.esp"},
     # Items & Progression
-    {"name": "Auto Upgrade Leveled Items", "nexus_id": 567, "nexus_file_id": 11063, "type": "esp", "category": "Items & Progression", "load_order": 40, "esp_name": "AutoUpgradeRewardsOnLevel.esp"},
-    {"name": "No Durability Damage", "nexus_id": 109, "nexus_file_id": 133, "type": "esp", "category": "Items & Progression", "load_order": 41, "esp_name": "No Durability Damage.esp"},
+    {"name": "Auto Upgrade Leveled Items", "nexus_id": 567, "type": "esp", "category": "Items & Progression", "load_order": 40, "esp_name": "AutoUpgradeRewardsOnLevel.esp"},
+    {"name": "No Durability Damage", "nexus_id": 109, "type": "esp", "category": "Items & Progression", "load_order": 41, "esp_name": "No Durability Damage.esp"},
     # No Enchantment Drain (1253) — bundled in patches/obse_plugins/
-    {"name": "Carry Weight + Weightless Misc", "nexus_id": 1734, "nexus_file_id": 6713, "type": "ue4ss", "category": "Items & Progression", "ue4ss_folder": "CarryWeightEncumbranceOverhaul"},
-    {"name": "Aiorta's Enchantment Adjustments", "nexus_id": 4645, "nexus_file_id": 18202, "type": "esp", "category": "Items & Progression", "load_order": 42, "esp_name": "AiortaEnchantAdjust.esp"},
-    {"name": "Better Enchanting and Soul Gems", "nexus_id": 1500, "nexus_file_id": 4074, "type": "esp", "category": "Items & Progression", "load_order": 43, "esp_name": "BetterEnchantingCEEAdjustment.esp"},
+    {"name": "Carry Weight + Weightless Misc", "nexus_id": 1734, "type": "ue4ss", "category": "Items & Progression", "ue4ss_folder": "CarryWeightEncumbranceOverhaul"},
+    {"name": "Aiorta's Enchantment Adjustments", "nexus_id": 4645, "type": "esp", "category": "Items & Progression", "load_order": 42, "esp_name": "AiortaEnchantAdjust.esp"},
+    {"name": "Better Enchanting and Soul Gems", "nexus_id": 1500, "type": "esp", "category": "Items & Progression", "load_order": 43, "esp_name": "BetterEnchantingCEEAdjustment.esp"},
     # Spells & Powers
-    {"name": "Spell Duration x10", "nexus_id": 1087, "nexus_file_id": 8324, "type": "esp", "category": "Spells & Powers", "load_order": 50, "esp_name": "Dank_SpellDuration.esp"},
-    {"name": "Unlimited Powers", "nexus_id": 1461, "nexus_file_id": 3762, "type": "esp", "category": "Spells & Powers", "load_order": 51, "esp_name": "UnlimitedPowers.esp"},
-    {"name": "Spell Freedom", "nexus_id": 138, "nexus_file_id": 20789, "type": "esp", "category": "Spells & Powers", "load_order": 52, "esp_name": "LessRestrictiveSpells.esp"},
-    {"name": "Spells Reworked", "nexus_id": 1238, "nexus_file_id": 2996, "type": "esp", "category": "Spells & Powers", "load_order": 53, "esp_name": "Spells Reworked.esp"},
+    {"name": "Spell Duration x10", "nexus_id": 1087, "type": "esp", "category": "Spells & Powers", "load_order": 50, "esp_name": "Dank_SpellDuration.esp"},
+    {"name": "Unlimited Powers", "nexus_id": 1461, "type": "esp", "category": "Spells & Powers", "load_order": 51, "esp_name": "UnlimitedPowers.esp"},
+    {"name": "Spell Freedom", "nexus_id": 138, "type": "esp", "category": "Spells & Powers", "load_order": 52, "esp_name": "LessRestrictiveSpells.esp"},
+    {"name": "Spells Reworked", "nexus_id": 1238, "type": "esp", "category": "Spells & Powers", "load_order": 53, "esp_name": "Spells Reworked.esp"},
     # UI & Quality of Life
-    {"name": "Better HUD Slim", "nexus_id": 13, "nexus_file_id": 9171, "type": "pak", "category": "UI & Quality of Life"},
-    {"name": "MISS Inventory Sorter", "nexus_id": 3288, "nexus_file_id": 21442, "type": "obse_config", "category": "UI & Quality of Life"},
-    {"name": "Auto Local Map", "nexus_id": 1119, "nexus_file_id": 9826, "type": "ue4ss", "category": "UI & Quality of Life", "ue4ss_folder": "AutoLocalMap"},
-    {"name": "Additional Map Markers", "nexus_id": 479, "nexus_file_id": 17741, "type": "esp", "category": "UI & Quality of Life", "load_order": 60, "esp_name": "AdditionalMapMarkers.esp"},
-    {"name": "Horse Whistle", "nexus_id": 153, "nexus_file_id": 10555, "type": "esp", "category": "UI & Quality of Life", "load_order": 61, "esp_name": "Horse Whistle.esp"},
-    {"name": "Fixed Persuasion", "nexus_id": 1913, "nexus_file_id": 5471, "type": "esp", "category": "UI & Quality of Life", "load_order": 62, "esp_name": "EasierPersuasion.esp"},
-    {"name": "Better Auto Lockpick", "nexus_id": 418, "nexus_file_id": 717, "type": "esp", "category": "UI & Quality of Life", "load_order": 63, "esp_name": "BetterAutoLockpick.esp"},
+    {"name": "Better HUD Slim", "nexus_id": 13, "type": "pak", "category": "UI & Quality of Life"},
+    {"name": "MISS Inventory Sorter", "nexus_id": 3288, "type": "obse_config", "category": "UI & Quality of Life"},
+    {"name": "Auto Local Map", "nexus_id": 1119, "type": "ue4ss", "category": "UI & Quality of Life", "ue4ss_folder": "AutoLocalMap"},
+    {"name": "Additional Map Markers", "nexus_id": 479, "type": "esp", "category": "UI & Quality of Life", "load_order": 60, "esp_name": "AdditionalMapMarkers.esp"},
+    {"name": "Horse Whistle", "nexus_id": 153, "type": "esp", "category": "UI & Quality of Life", "load_order": 61, "esp_name": "Horse Whistle.esp"},
+    {"name": "Fixed Persuasion", "nexus_id": 1913, "type": "esp", "category": "UI & Quality of Life", "load_order": 62, "esp_name": "EasierPersuasion.esp"},
+    {"name": "Better Auto Lockpick", "nexus_id": 418, "type": "esp", "category": "UI & Quality of Life", "load_order": 63, "esp_name": "BetterAutoLockpick.esp"},
     # Richer Vendors removed — overwritten by Immersive Vendor and Loot (4100)
-    {"name": "PreserveStats", "nexus_id": 783, "nexus_file_id": 2277, "type": "esp", "category": "UI & Quality of Life", "load_order": 65, "esp_name": "PreserveStats.esp"},
-    {"name": "Quieter Lockpicking", "nexus_id": 1788, "nexus_file_id": 7845, "type": "pak", "category": "UI & Quality of Life"},
-    {"name": "Better Movement", "nexus_id": 2479, "nexus_file_id": 10894, "type": "ue4ss", "category": "UI & Quality of Life", "ue4ss_folder": "BetterMovement"},
-    {"name": "Simple Photo Mode", "nexus_id": 85, "nexus_file_id": 13178, "type": "pak", "category": "UI & Quality of Life"},
+    {"name": "PreserveStats", "nexus_id": 783, "type": "esp", "category": "UI & Quality of Life", "load_order": 65, "esp_name": "PreserveStats.esp"},
+    {"name": "Quieter Lockpicking", "nexus_id": 1788, "type": "pak", "category": "UI & Quality of Life"},
+    {"name": "Better Movement", "nexus_id": 2479, "type": "ue4ss", "category": "UI & Quality of Life", "ue4ss_folder": "BetterMovement"},
+    {"name": "Simple Photo Mode", "nexus_id": 85, "type": "pak", "category": "UI & Quality of Life"},
     # Audio
-    {"name": "High Quality Music Replacer", "nexus_id": 1267, "nexus_file_id": 3647, "type": "pak", "category": "Audio"},
-    {"name": "Armor Sound Overhaul", "nexus_id": 1987, "nexus_file_id": 6007, "type": "pak", "category": "Audio"},
+    {"name": "High Quality Music Replacer", "nexus_id": 1267, "type": "pak", "category": "Audio"},
+    {"name": "Armor Sound Overhaul", "nexus_id": 1987, "type": "pak", "category": "Audio"},
     # Stealth
-    {"name": "Better Sneak", "nexus_id": 1921, "nexus_file_id": 12475, "type": "ue4ss", "category": "Stealth", "ue4ss_folder": "BetterSneak"},
-    {"name": "Harder Stealth", "nexus_id": 1732, "nexus_file_id": 7036, "type": "config", "category": "Stealth", "config_dest": "gamesettings"},
+    {"name": "Better Sneak", "nexus_id": 1921, "type": "ue4ss", "category": "Stealth", "ue4ss_folder": "BetterSneak"},
+    {"name": "Harder Stealth", "nexus_id": 1732, "type": "config", "category": "Stealth", "config_dest": "gamesettings"},
     # Travel & Mounts
-    {"name": "Better Cyrodiil Travel", "nexus_id": 1496, "nexus_file_id": 12482, "type": "esp", "category": "Travel & Mounts", "load_order": 36, "esp_name": "BetterCyrodiilTravel.esp"},
-    {"name": "Horse Improvements", "nexus_id": 1832, "nexus_file_id": 5879, "type": "esp", "category": "Travel & Mounts", "load_order": 66, "esp_name": "Players Horse Improvements x1 Speed.esp"},
-    {"name": "A Horse With Saddlebags", "nexus_id": 4527, "nexus_file_id": 18300, "type": "esp", "category": "Travel & Mounts", "load_order": 67, "esp_name": "A Horse With Saddlebags.esp"},
+    {"name": "Better Cyrodiil Travel", "nexus_id": 1496, "type": "esp", "category": "Travel & Mounts", "load_order": 36, "esp_name": "BetterCyrodiilTravel.esp"},
+    {"name": "Horse Improvements", "nexus_id": 1832, "type": "esp", "category": "Travel & Mounts", "load_order": 66, "esp_name": "Players Horse Improvements x1 Speed.esp"},
+    {"name": "A Horse With Saddlebags", "nexus_id": 4527, "type": "esp", "category": "Travel & Mounts", "load_order": 67, "esp_name": "A Horse With Saddlebags.esp"},
     # Survival
-    {"name": "Core Survival", "nexus_id": 3037, "nexus_file_id": 20997, "type": "esp", "category": "Survival", "load_order": 80, "esp_name": "CoreSurvival.esp"},
-    {"name": "Basic Portable Tent", "nexus_id": 967, "nexus_file_id": 15625, "type": "esp", "category": "Survival", "load_order": 81, "esp_name": "BasicPortableTentUM.esp"},
+    {"name": "Core Survival", "nexus_id": 3037, "type": "esp", "category": "Survival", "load_order": 80, "esp_name": "CoreSurvival.esp"},
+    {"name": "Basic Portable Tent", "nexus_id": 967, "type": "esp", "category": "Survival", "load_order": 81, "esp_name": "BasicPortableTentUM.esp"},
     # Economy & Loot
-    {"name": "Jobs of Oblivion", "nexus_id": 5189, "nexus_file_id": 21189, "type": "esp", "category": "Economy & Loot", "load_order": 82, "esp_name": "JobsOfOblivion.esp"},
-    {"name": "Immersive Vendor and Loot", "nexus_id": 4100, "nexus_file_id": 19434, "type": "esp", "category": "Economy & Loot", "load_order": 83, "esp_name": "ImmersiveVendorAndLoot.esp"},
-    {"name": "Enhanced Endgame Loot", "nexus_id": 1871, "nexus_file_id": 19702, "type": "esp", "category": "Economy & Loot", "load_order": 84, "esp_name": "EnhancedEndgameLoot.esp"},
+    {"name": "Jobs of Oblivion", "nexus_id": 5189, "type": "esp", "category": "Economy & Loot", "load_order": 82, "esp_name": "JobsOfOblivion.esp"},
+    {"name": "Immersive Vendor and Loot", "nexus_id": 4100, "type": "esp", "category": "Economy & Loot", "load_order": 83, "esp_name": "ImmersiveVendorAndLoot.esp"},
+    {"name": "Enhanced Endgame Loot", "nexus_id": 1871, "type": "esp", "category": "Economy & Loot", "load_order": 84, "esp_name": "EnhancedEndgameLoot.esp"},
     # New Content
-    {"name": "Dark Brotherhood Infinitum", "nexus_id": 3170, "nexus_file_id": 17578, "type": "esp", "category": "New Content", "load_order": 90, "esp_name": "DarkBrotherhoodInfinitum.esp"},
-    {"name": "Imperial Legion Infinitum", "nexus_id": 4225, "nexus_file_id": 16524, "type": "esp", "category": "New Content", "load_order": 91, "esp_name": "ImperialLegionInfinitum.esp"},
-    {"name": "Advanced Followers", "nexus_id": 722, "nexus_file_id": 17320, "type": "esp", "category": "New Content", "load_order": 92, "esp_name": "Advanced Followers.esp"},
-    {"name": "Lakeheart Manor", "nexus_id": 763, "nexus_file_id": 5884, "type": "esp", "category": "New Content", "load_order": 93, "esp_name": "LuxuryHouseMod.esp"},
-    {"name": "Radiant Mages Guild Quests", "nexus_id": 3858, "nexus_file_id": 20590, "type": "esp", "category": "New Content", "load_order": 94, "esp_name": "MagesGuildRadiantNecroQuests.esp"},
-    {"name": "Mad Spell Pack", "nexus_id": 4242, "nexus_file_id": 19241, "type": "ue4ss", "category": "New Content", "ue4ss_folder": "MadSpellPack", "archive_ue4ss_folders": ["MadSpellPack", "MadTransform"]},
+    {"name": "Dark Brotherhood Infinitum", "nexus_id": 3170, "type": "esp", "category": "New Content", "load_order": 90, "esp_name": "DarkBrotherhoodInfinitum.esp"},
+    {"name": "Imperial Legion Infinitum", "nexus_id": 4225, "type": "esp", "category": "New Content", "load_order": 91, "esp_name": "ImperialLegionInfinitum.esp"},
+    {"name": "Advanced Followers", "nexus_id": 722, "type": "esp", "category": "New Content", "load_order": 92, "esp_name": "Advanced Followers.esp"},
+    {"name": "Lakeheart Manor", "nexus_id": 763, "type": "esp", "category": "New Content", "load_order": 93, "esp_name": "LuxuryHouseMod.esp"},
+    {"name": "Radiant Mages Guild Quests", "nexus_id": 3858, "type": "esp", "category": "New Content", "load_order": 94, "esp_name": "MagesGuildRadiantNecroQuests.esp"},
+    {"name": "Mad Spell Pack", "nexus_id": 4242, "type": "ue4ss", "category": "New Content", "ue4ss_folder": "MadSpellPack", "archive_ue4ss_folders": ["MadSpellPack", "MadTransform"]},
 ]
 
 # ─── Deck Optimization Mods (replaces visual mods on Steam Deck) ─────────────
@@ -172,8 +171,8 @@ def load_saved_api_key() -> str:
     return ""
 
 
-def save_api_key(api_key: str, game_path: str = ""):
-    """Save Nexus API key and optionally game path to config file."""
+def save_api_key(api_key: str):
+    """Save Nexus API key to config file."""
     try:
         CHIM_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
         data = {}
@@ -183,174 +182,9 @@ def save_api_key(api_key: str, game_path: str = ""):
             except (json.JSONDecodeError, OSError):
                 pass
         data["nexus_api_key"] = api_key
-        if game_path:
-            data["game_path"] = game_path
         CHIM_CONFIG_FILE.write_text(json.dumps(data, indent=2))
     except OSError:
         pass
-
-
-def save_game_path(game_path: str):
-    """Save game path to config without changing API key."""
-    try:
-        CHIM_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-        data = {}
-        if CHIM_CONFIG_FILE.is_file():
-            try:
-                data = json.loads(CHIM_CONFIG_FILE.read_text())
-            except (json.JSONDecodeError, OSError):
-                pass
-        data["game_path"] = game_path
-        CHIM_CONFIG_FILE.write_text(json.dumps(data, indent=2))
-    except OSError:
-        pass
-
-
-def save_manifest(game_path: Path, manifest: dict):
-    """Save CHIM manifest to game directory."""
-    path = game_path / "CHIM_manifest.json"
-    path.write_text(json.dumps(manifest, indent=2))
-
-
-def load_manifest(game_path: Path) -> Optional[dict]:
-    """Load CHIM manifest from game directory."""
-    path = game_path / "CHIM_manifest.json"
-    if not path.is_file():
-        return None
-    try:
-        return json.loads(path.read_text())
-    except (json.JSONDecodeError, OSError):
-        return None
-
-
-def create_mod_backup(nid: int, mod_entry: dict, game_path: Path) -> Optional[Path]:
-    """Backup a mod's files before updating."""
-    safe_name = f"{nid}_{mod_entry['name'].replace(' ', '_')[:40]}"
-    backup_dir = game_path / "CHIM_mod_backups" / safe_name / f"backup_{mod_entry.get('installed_file_id', 'unknown')}"
-    files_dir = backup_dir / "files"
-    files_dir.mkdir(parents=True, exist_ok=True)
-
-    file_map = {}
-    for rel_path in mod_entry.get("files", []):
-        src = game_path / rel_path
-        if src.is_file():
-            dest_name = src.name
-            # Handle collisions
-            if dest_name in file_map:
-                dest_name = f"{abs(hash(rel_path)) % 99999}_{dest_name}"
-            shutil.copy2(src, files_dir / dest_name)
-            file_map[dest_name] = rel_path
-
-    metadata = {
-        "file_id": mod_entry.get("installed_file_id"),
-        "version": mod_entry.get("installed_version", "unknown"),
-        "backed_up_at": datetime.now().isoformat(),
-        "file_map": file_map,
-    }
-    (backup_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
-    return backup_dir
-
-
-def rollback_mod(nid: int, game_path: Path, manifest: dict) -> tuple[bool, str]:
-    """Rollback a mod to its backed-up version."""
-    mod_entry = manifest["mods"].get(str(nid))
-    if not mod_entry:
-        return False, "Mod not found in manifest"
-
-    safe_name = f"{nid}_{mod_entry['name'].replace(' ', '_')[:40]}"
-    backup_root = game_path / "CHIM_mod_backups" / safe_name
-
-    if not backup_root.is_dir():
-        return False, "No backup found"
-
-    backups = sorted([d for d in backup_root.iterdir() if d.is_dir()],
-                     key=lambda d: d.stat().st_mtime, reverse=True)
-    if not backups:
-        return False, "No backup found"
-
-    backup_dir = backups[0]
-    try:
-        metadata = json.loads((backup_dir / "metadata.json").read_text())
-    except (json.JSONDecodeError, OSError):
-        return False, "Corrupt backup metadata"
-
-    # Remove current files
-    for rel_path in mod_entry.get("files", []):
-        full_path = game_path / rel_path
-        if full_path.is_file():
-            full_path.unlink()
-
-    # Restore backup files
-    files_dir = backup_dir / "files"
-    restored_files = []
-    for backup_name, original_rel in metadata.get("file_map", {}).items():
-        src = files_dir / backup_name
-        if src.is_file():
-            dest = game_path / original_rel
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, dest)
-            restored_files.append(original_rel)
-
-    # Update manifest
-    mod_entry["installed_file_id"] = metadata.get("file_id")
-    mod_entry["installed_version"] = metadata.get("version", "unknown")
-    mod_entry["files"] = restored_files
-    manifest["last_updated"] = datetime.now().isoformat()
-    save_manifest(game_path, manifest)
-
-    # Rebuild load order if ESP
-    if mod_entry.get("type") == "esp":
-        try:
-            build_load_order(
-                [m for m in MODS if m.get("load_order") is not None],
-                game_path
-            )
-        except Exception:
-            pass
-
-    # Clean up used backup
-    shutil.rmtree(backup_dir)
-
-    return True, "Rolled back successfully"
-
-
-def get_available_backups(game_path: Path) -> dict:
-    """Scan for available mod backups. Returns {nid: {name, version, backup_path}}."""
-    backup_root = game_path / "CHIM_mod_backups"
-    if not backup_root.is_dir():
-        return {}
-
-    result = {}
-    for mod_dir in backup_root.iterdir():
-        if not mod_dir.is_dir():
-            continue
-        # Parse nid from directory name (format: "477_Mod_Name")
-        parts = mod_dir.name.split("_", 1)
-        if not parts[0].isdigit():
-            continue
-        nid = int(parts[0])
-
-        # Find most recent backup
-        backups = sorted([d for d in mod_dir.iterdir() if d.is_dir()],
-                        key=lambda d: d.stat().st_mtime, reverse=True)
-        if not backups:
-            continue
-
-        meta_path = backups[0] / "metadata.json"
-        if meta_path.is_file():
-            try:
-                meta = json.loads(meta_path.read_text())
-                result[nid] = {
-                    "name": parts[1].replace("_", " ") if len(parts) > 1 else f"Mod {nid}",
-                    "version": meta.get("version", "unknown"),
-                    "file_id": meta.get("file_id"),
-                    "backup_path": backups[0],
-                }
-            except (json.JSONDecodeError, OSError):
-                continue
-
-    return result
-
 
 # ─── Theme ──────────────────────────────────────────────────────────────────────
 
@@ -495,32 +329,14 @@ def nexus_api_get_download_url(nexus_id: int, file_id: int, api_key: str) -> Opt
     return None
 
 
-def nexus_api_pick_main_file(files: list, pinned_file_id: Optional[int] = None) -> Optional[dict]:
-    """Pick the file to download. Uses pinned file_id if provided, otherwise latest MAIN."""
-    # If we have a pinned file ID, use that exact version
-    if pinned_file_id:
-        for f in files:
-            if f.get("file_id") == pinned_file_id:
-                return f
-        # Pinned file not found (maybe removed from Nexus) — fall through to latest
-
+def nexus_api_pick_main_file(files: list) -> Optional[dict]:
+    """Pick the best file to download — prefer MAIN_FILE category."""
     main_files = [f for f in files if f.get("category_name") == "MAIN"]
     if main_files:
+        # Pick the most recent main file
         main_files.sort(key=lambda f: f.get("uploaded_timestamp", 0), reverse=True)
         return main_files[0]
-    active = [f for f in files if f.get("category_name") != "ARCHIVED"]
-    if active:
-        active.sort(key=lambda f: f.get("uploaded_timestamp", 0), reverse=True)
-        return active[0]
-    return files[0] if files else None
-
-
-def nexus_api_get_latest_file(files: list) -> Optional[dict]:
-    """Get the latest main file regardless of pinning. Used for update checks."""
-    main_files = [f for f in files if f.get("category_name") == "MAIN"]
-    if main_files:
-        main_files.sort(key=lambda f: f.get("uploaded_timestamp", 0), reverse=True)
-        return main_files[0]
+    # Fall back to any non-archived file
     active = [f for f in files if f.get("category_name") != "ARCHIVED"]
     if active:
         active.sort(key=lambda f: f.get("uploaded_timestamp", 0), reverse=True)
@@ -909,6 +725,8 @@ def backup_existing_mods(game_path: Path) -> Optional[Path]:
     Create a backup of existing mod files before CHIM install.
     Returns backup directory path, or None if nothing to back up.
     """
+    from datetime import datetime
+
     data_dir = game_path / "OblivionRemastered" / "Content" / "Dev" / "ObvData" / "Data"
     paks_dir = game_path / "OblivionRemastered" / "Content" / "Paks" / "~mods"
     obse_dir = game_path / "OblivionRemastered" / "Binaries" / "Win64" / "OBSE" / "Plugins"
@@ -1042,11 +860,10 @@ def classify_and_install_files(
     game_path: Path,
     mod_type: str,
     mod_name: str,
-    extract_paks: bool = False,
-) -> tuple[int, list[str], list[str]]:
+) -> tuple[int, list[str]]:
     """
     Walk extracted files and copy them to the correct game directories.
-    Returns (files_installed, list_of_errors, list_of_written_files_relative_to_game_path).
+    Returns (files_installed, list_of_errors).
     """
     data_dir = game_path / "OblivionRemastered" / "Content" / "Dev" / "ObvData" / "Data"
     paks_dir = game_path / "OblivionRemastered" / "Content" / "Paks" / "~mods"
@@ -1056,15 +873,6 @@ def classify_and_install_files(
 
     installed = 0
     errors = []
-    written_files = []  # relative paths to game_path
-
-    def _track_copy(src: Path, dest: Path):
-        """Copy file and track the destination relative to game_path."""
-        shutil.copy2(src, dest)
-        try:
-            written_files.append(str(dest.relative_to(game_path)))
-        except ValueError:
-            written_files.append(str(dest))
 
     # Ensure target dirs exist
     for d in [data_dir, paks_dir, obse_dir, ue4ss_mods_dir]:
@@ -1092,16 +900,16 @@ def classify_and_install_files(
             if ext in (".exe", ".dll") and "obse" in name_lower:
                 dest = bin_dir / f.name
                 dest.parent.mkdir(parents=True, exist_ok=True)
-                _track_copy(f, dest)
+                shutil.copy2(f, dest)
                 installed += 1
             elif ext in (".dll", ".ini") and "obse" not in name_lower:
                 # Plugin files
                 dest = obse_dir / f.name
-                _track_copy(f, dest)
+                shutil.copy2(f, dest)
                 installed += 1
             elif ext in (".esp", ".esm"):
                 dest = data_dir / f.name
-                _track_copy(f, dest)
+                shutil.copy2(f, dest)
                 installed += 1
             elif "data" in str(rel).lower() and "obse" in str(rel).lower():
                 # Preserve subdirectory structure under OBSE/Plugins
@@ -1114,15 +922,15 @@ def classify_and_install_files(
                 else:
                     dest = obse_dir / f.name
                 dest.parent.mkdir(parents=True, exist_ok=True)
-                _track_copy(f, dest)
+                shutil.copy2(f, dest)
                 installed += 1
             else:
                 # Fallback: copy to bin dir preserving relative path
                 dest = bin_dir / rel
                 dest.parent.mkdir(parents=True, exist_ok=True)
-                _track_copy(f, dest)
+                shutil.copy2(f, dest)
                 installed += 1
-        return installed, errors, written_files
+        return installed, errors
 
     if mod_type == "ue4ss_framework":
         # UE4SS framework: proxy DLL goes to Binaries/Win64/, everything else
@@ -1155,21 +963,21 @@ def classify_and_install_files(
             if f.name.lower() in PROXY_DLLS:
                 # Proxy DLL goes to Binaries/Win64/ root
                 dest = bin_dir / f.name
-                _track_copy(f, dest)
+                shutil.copy2(f, dest)
                 installed += 1
             elif len(parts) >= 2 and parts[0].lower() == "ue4ss":
                 # Already in a ue4ss/ subfolder — preserve relative path
                 dest = bin_dir / rel
                 dest.parent.mkdir(parents=True, exist_ok=True)
-                _track_copy(f, dest)
+                shutil.copy2(f, dest)
                 installed += 1
             else:
                 # Everything else (UE4SS.dll, settings, Mods/) goes to ue4ss/
                 dest = ue4ss_dest / rel
                 dest.parent.mkdir(parents=True, exist_ok=True)
-                _track_copy(f, dest)
+                shutil.copy2(f, dest)
                 installed += 1
-        return installed, errors, written_files
+        return installed, errors
 
     # For standard mod types, find the "real" root of extracted content
     # (skip single wrapper directories)
@@ -1201,20 +1009,20 @@ def classify_and_install_files(
                 if expected_esp:
                     if f.name == expected_esp:
                         dest = data_dir / f.name
-                        _track_copy(f, dest)
+                        shutil.copy2(f, dest)
                         installed += 1
                 else:
                     dest = data_dir / f.name
-                    _track_copy(f, dest)
+                    shutil.copy2(f, dest)
                     installed += 1
             elif ext == ".bsa":
                 dest = data_dir / f.name
-                _track_copy(f, dest)
+                shutil.copy2(f, dest)
                 installed += 1
             elif ext in (".ini",):
                 # INI files that accompany ESPs go to Data
                 dest = data_dir / f.name
-                _track_copy(f, dest)
+                shutil.copy2(f, dest)
                 installed += 1
             elif ext in (".json",):
                 # JSON configs (e.g. MagicLoader) — preserve subfolder structure under Data
@@ -1228,22 +1036,17 @@ def classify_and_install_files(
                 else:
                     dest = data_dir / f.name
                 dest.parent.mkdir(parents=True, exist_ok=True)
-                _track_copy(f, dest)
+                shutil.copy2(f, dest)
                 installed += 1
 
     elif mod_type == "pak":
         # PAK files are deployed from patches/ (tested versions).
         # From Nexus archives we only extract ESPs, JSONs, and other non-PAK content.
-        # When extract_paks=True (updates), also extract .pak/.ucas/.utoc files.
         for f in all_files:
             ext = f.suffix.lower()
-            if ext in (".pak", ".ucas", ".utoc") and extract_paks:
-                dest = paks_dir / f.name
-                _track_copy(f, dest)
-                installed += 1
-            elif ext in (".esp", ".esm"):
+            if ext in (".esp", ".esm"):
                 dest = data_dir / f.name
-                _track_copy(f, dest)
+                shutil.copy2(f, dest)
                 installed += 1
             elif ext == ".json":
                 # MagicLoader configs and similar — preserve relative path under Data/
@@ -1256,7 +1059,7 @@ def classify_and_install_files(
                     dest = magic_dir / f.name
                 else:
                     dest = data_dir / f.name
-                _track_copy(f, dest)
+                shutil.copy2(f, dest)
                 installed += 1
 
     elif mod_type == "obse":
@@ -1264,11 +1067,11 @@ def classify_and_install_files(
             ext = f.suffix.lower()
             if ext in (".dll", ".ini", ".bin", ".pdb"):
                 dest = obse_dir / f.name
-                _track_copy(f, dest)
+                shutil.copy2(f, dest)
                 installed += 1
             elif ext in (".esp", ".esm"):
                 dest = data_dir / f.name
-                _track_copy(f, dest)
+                shutil.copy2(f, dest)
                 installed += 1
 
     elif mod_type == "ue4ss":
@@ -1325,12 +1128,12 @@ def classify_and_install_files(
                 # Route ESPs
                 if f.suffix.lower() in (".esp", ".esm"):
                     dest = data_dir / f.name
-                    _track_copy(f, dest)
+                    shutil.copy2(f, dest)
                     installed += 1
                 # Route PAKs
                 elif f.suffix.lower() in (".pak", ".ucas", ".utoc"):
                     dest = paks_dir / f.name
-                    _track_copy(f, dest)
+                    shutil.copy2(f, dest)
                     installed += 1
                 # Route UE4SS mod files — find files under a target folder name
                 elif any(tf.lower() in parts_lower for tf in target_folders):
@@ -1346,7 +1149,7 @@ def classify_and_install_files(
                             # Map all archive folders into the single target folder
                             dest = mod_dir / inner_rel
                             dest.parent.mkdir(parents=True, exist_ok=True)
-                            _track_copy(f, dest)
+                            shutil.copy2(f, dest)
                             installed += 1
                             break
                 # Route other files (configs like MadConfigs/) to bin_dir preserving structure
@@ -1359,7 +1162,7 @@ def classify_and_install_files(
                         if "ue4ss" not in str(after).lower():
                             dest = bin_dir / after
                             dest.parent.mkdir(parents=True, exist_ok=True)
-                            _track_copy(f, dest)
+                            shutil.copy2(f, dest)
                             installed += 1
         else:
             # Simple archive — no game paths, use content_root approach
@@ -1375,11 +1178,11 @@ def classify_and_install_files(
 
                 if ext in (".esp", ".esm"):
                     dest = data_dir / f.name
-                    _track_copy(f, dest)
+                    shutil.copy2(f, dest)
                     installed += 1
                 elif ext in (".pak", ".ucas", ".utoc"):
                     dest = paks_dir / f.name
-                    _track_copy(f, dest)
+                    shutil.copy2(f, dest)
                     installed += 1
                 else:
                     if has_structure:
@@ -1387,7 +1190,7 @@ def classify_and_install_files(
                     else:
                         dest = mod_dir / f.name
                     dest.parent.mkdir(parents=True, exist_ok=True)
-                    _track_copy(f, dest)
+                    shutil.copy2(f, dest)
                     installed += 1
 
         # Set enabled.txt — data mods and optional mods should NOT have it
@@ -1406,7 +1209,7 @@ def classify_and_install_files(
             ext = f.suffix.lower()
             if ext in (".json", ".ini", ".cfg", ".txt"):
                 dest = obse_plugins_dir / f.name
-                _track_copy(f, dest)
+                shutil.copy2(f, dest)
                 installed += 1
 
     elif mod_type == "config":
@@ -1435,23 +1238,23 @@ def classify_and_install_files(
                 else:
                     dest = bin_dir / f.name
                 dest.parent.mkdir(parents=True, exist_ok=True)
-                _track_copy(f, dest)
+                shutil.copy2(f, dest)
                 installed += 1
             elif ext in (".pak", ".ucas", ".utoc"):
                 dest = paks_dir / f.name
-                _track_copy(f, dest)
+                shutil.copy2(f, dest)
                 installed += 1
             elif ext in (".cfg", ".txt", ".json"):
                 dest = bin_dir / f.name
                 dest.parent.mkdir(parents=True, exist_ok=True)
-                _track_copy(f, dest)
+                shutil.copy2(f, dest)
                 installed += 1
 
     if installed == 0 and mod_type != "pak":
         # PAK mods may have 0 installed files because PAKs are deployed from patches/
         errors.append(f"No recognized files found in archive for {mod_name}")
 
-    return installed, errors, written_files
+    return installed, errors
 
 
 # ─── Custom Widgets ─────────────────────────────────────────────────────────────
@@ -1765,24 +1568,16 @@ class CHIMInstaller:
         # Center ornament
         self._make_ornament_line(frame, 350).pack(pady=(0, 50))
 
-        # Buttons
-        btn_frame = tk.Frame(frame, bg=COLORS["bg"])
-        btn_frame.pack()
-
+        # Begin button
         GoldButton(
-            btn_frame, text="Install CHIM", command=self._show_profile,
-            width=200, height=48, font_size=13,
-        ).pack(side="left", padx=(0, 16))
-
-        GoldButton(
-            btn_frame, text="Manage Mods", command=self._show_updates,
-            width=180, height=48, font_size=11,
-        ).pack(side="left")
+            frame, text="Begin Installation", command=self._show_profile,
+            width=260, height=48, font_size=13,
+        ).pack()
 
         # Bottom ornament + version
         self._make_ornament_line(frame, 250).pack(pady=(50, 10))
         tk.Label(
-            frame, text="v2.0", bg=COLORS["bg"],
+            frame, text="v1.3", bg=COLORS["bg"],
             fg=COLORS["ornament"], font=("Segoe UI", 8),
         ).pack()
 
@@ -2383,9 +2178,8 @@ class CHIMInstaller:
                     text=f"Failed to get files for {n}", fg=COLORS["red"]))
                 continue
 
-            # Pick file — use pinned version if available
-            pinned_id = mod.get("nexus_file_id")
-            file_info = nexus_api_pick_main_file(files, pinned_file_id=pinned_id)
+            # Pick main file
+            file_info = nexus_api_pick_main_file(files)
             if not file_info:
                 continue
 
@@ -2865,7 +2659,6 @@ class CHIMInstaller:
 
         # ── Step 3: Install mods from archives ──
         self._log("Step 3: Installing mods...", "gold")
-        mod_manifest_data = {}  # nid_str -> {name, nexus_id, nexus_file_id, type, files}
         for idx, mod in enumerate(to_install):
             nid = mod["nexus_id"]
             archive = self.mod_files[nid]
@@ -2891,24 +2684,13 @@ class CHIMInstaller:
                 shutil.rmtree(tmp_dir, ignore_errors=True)
                 continue
 
-            installed, errs, written = classify_and_install_files(tmp_dir, game_path, mod["type"], mod["name"])
+            installed, errs = classify_and_install_files(tmp_dir, game_path, mod["type"], mod["name"])
             if installed > 0:
                 self._log(f"    {installed} file(s) ✔", "green")
             if errs:
                 for e in errs:
                     self._log(f"    {e}", "red")
                 errors_total.extend(errs)
-
-            # Track for manifest
-            nid_str = str(nid)
-            mod_manifest_data[nid_str] = {
-                "name": mod["name"],
-                "nexus_id": nid,
-                "nexus_file_id": mod.get("nexus_file_id"),
-                "installed_file_id": mod.get("nexus_file_id"),
-                "type": mod["type"],
-                "files": written,
-            }
 
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
@@ -3119,28 +2901,6 @@ class CHIMInstaller:
                     GoldButton(btn_frame_dlg, text="Done", command=on_done, width=100, height=38, font_size=10).pack(side="left")
                 self.root.after(0, _copy_and_prompt)
 
-        # ── Step 8: Save manifest ──
-        self._log("Step 8: Saving manifest...", "gold")
-        self.root.after(0, lambda: self._install_status.config(text="Saving manifest..."))
-        try:
-            manifest = {
-                "chim_version": "2.0",
-                "profile": self.profile,
-                "installed_at": datetime.now().isoformat(),
-                "game_path": str(game_path),
-                "mods": mod_manifest_data,
-                "frameworks": {
-                    "obse": {"version": "bundled"},
-                    "ue4ss": {"version": "bundled"},
-                },
-            }
-            save_manifest(game_path, manifest)
-            save_game_path(str(game_path))
-            self._log("  Manifest saved ✔", "green")
-        except Exception as e:
-            self._log(f"  Manifest save failed: {e}", "red")
-        self._log("")
-
         self.root.after(0, lambda: self._install_progress.set_value(1.0))
         self._log("")
         if errors_total:
@@ -3260,18 +3020,13 @@ class CHIMInstaller:
         btn_frame.pack()
 
         GoldButton(
-            btn_frame, text="Check for Updates", command=self._show_updates,
-            width=180, height=38, font_size=10,
+            btn_frame, text="Save Install Log", command=self._save_log,
+            width=160, height=38, font_size=10,
         ).pack(side="left", padx=(0, 12))
 
         GoldButton(
-            btn_frame, text="Save Log", command=self._save_log,
-            width=120, height=38, font_size=10,
-        ).pack(side="left", padx=(0, 12))
-
-        GoldButton(
-            btn_frame, text="Close", command=self.root.destroy,
-            width=100, height=38, font_size=10,
+            btn_frame, text="Close Installer", command=self.root.destroy,
+            width=160, height=38, font_size=10,
         ).pack(side="left")
 
     def _save_log(self):
@@ -3280,454 +3035,6 @@ class CHIMInstaller:
         header = f"CHIM Installer Log — Profile: {profile_name} — Dry Run: {self.dry_run}\n{'='*60}\n\n"
         log_path.write_text(header + "\n".join(self.install_log_lines))
         messagebox.showinfo("Log Saved", f"Install log saved to:\n{log_path}")
-
-    # ─── Manage Mods / Updates / Rollback ─────────────────────────────────
-
-    def _show_updates(self):
-        """Manage Mods gateway — detect install, offer update check or rollback."""
-        self._clear_container()
-        frame = tk.Frame(self.container, bg=COLORS["bg"])
-        frame.pack(fill="both", expand=True, padx=30, pady=20)
-
-        self._make_label(frame, "Manage Mods", size=22, color=COLORS["gold"], bold=True).pack(anchor="w", pady=(0, 6))
-        self._make_label(frame, "Update individual mods or rollback if something broke.", size=10, color=COLORS["text_dim"]).pack(anchor="w", pady=(0, 20))
-
-        # Detect game path
-        game_path = None
-        # Try saved path from config
-        try:
-            if CHIM_CONFIG_FILE.is_file():
-                cfg = json.loads(CHIM_CONFIG_FILE.read_text())
-                saved_path = cfg.get("game_path")
-                if saved_path and Path(saved_path).is_dir():
-                    game_path = saved_path
-        except (json.JSONDecodeError, OSError):
-            pass
-        # Try auto-detect
-        if not game_path:
-            game_path = detect_game_path()
-        # Try instance variable
-        if not game_path and self.game_path:
-            game_path = self.game_path
-
-        if not game_path:
-            self._make_label(frame, "Could not find Oblivion Remastered. Install CHIM first.", size=11, color=COLORS["red"]).pack(pady=(20, 10))
-            GoldButton(frame, text="\u2190 Back", command=self._show_welcome, width=100, height=36, font_size=10).pack(anchor="w", pady=(10, 0))
-            return
-
-        self.game_path = game_path
-        manifest = load_manifest(Path(game_path))
-
-        if not manifest:
-            self._make_label(frame, "No CHIM installation found at this path.", size=11, color=COLORS["red"]).pack(pady=(10, 0))
-            self._make_label(frame, f"Path: {game_path}", size=9, color=COLORS["text_dim"]).pack(pady=(4, 10))
-            self._make_label(frame, "Install CHIM first, then come back here to manage mods.", size=10, color=COLORS["text_dim"]).pack(pady=(0, 20))
-            btn_row = tk.Frame(frame, bg=COLORS["bg"])
-            btn_row.pack(anchor="w")
-            GoldButton(btn_row, text="Install CHIM", command=self._show_profile, width=160, height=38, font_size=10).pack(side="left", padx=(0, 12))
-            GoldButton(btn_row, text="\u2190 Back", command=self._show_welcome, width=100, height=36, font_size=10).pack(side="left")
-            return
-
-        # Show install info
-        info_frame = tk.Frame(frame, bg=COLORS["bg_light"], padx=16, pady=12, highlightbackground=COLORS["border_gold"], highlightthickness=1)
-        info_frame.pack(fill="x", pady=(0, 20))
-
-        profile = manifest.get("profile", "unknown")
-        mod_count = len(manifest.get("mods", {}))
-        installed_at = manifest.get("installed_at", "unknown")[:10]
-
-        tk.Label(info_frame, text=f"CHIM {'Deck' if profile == 'deck' else 'PC'} \u2014 {mod_count} mods installed", bg=COLORS["bg_light"], fg=COLORS["gold"], font=("Segoe UI", 12, "bold")).pack(anchor="w")
-        tk.Label(info_frame, text=f"Installed: {installed_at}  |  Path: {game_path}", bg=COLORS["bg_light"], fg=COLORS["text_dim"], font=("Segoe UI", 9)).pack(anchor="w", pady=(4, 0))
-
-        self._make_separator(frame)
-
-        # Buttons
-        btn_frame = tk.Frame(frame, bg=COLORS["bg"])
-        btn_frame.pack(fill="x")
-
-        api_key = load_saved_api_key()
-
-        check_btn = GoldButton(btn_frame, text="Check for Updates", command=lambda: self._show_update_check(manifest, api_key), width=200, height=42, font_size=11, enabled=bool(api_key))
-        check_btn.pack(side="left", padx=(0, 12))
-
-        if not api_key:
-            self._make_label(frame, "Nexus API key required for update checks. Enter it during install or paste below.", size=9, color=COLORS["text_dim"]).pack(anchor="w", pady=(8, 0))
-            # Add API key entry
-            key_frame = tk.Frame(frame, bg=COLORS["bg"])
-            key_frame.pack(fill="x", pady=(8, 0))
-            key_var = tk.StringVar()
-            key_entry = tk.Entry(key_frame, textvariable=key_var, bg=COLORS["bg_light"], fg=COLORS["gold_bright"], insertbackground=COLORS["gold"], font=("JetBrains Mono", 9), relief="flat", bd=0, highlightthickness=1, highlightbackground=COLORS["border"])
-            key_entry.pack(side="left", fill="x", expand=True, padx=(0, 8), ipady=6)
-            def _save_and_enable():
-                k = key_var.get().strip()
-                if k:
-                    save_api_key(k)
-                    check_btn.set_enabled(True)
-                    check_btn._command = lambda: self._show_update_check(manifest, k)
-            GoldButton(key_frame, text="Save Key", command=_save_and_enable, width=100, height=32, font_size=9).pack(side="left")
-
-        # Rollback button
-        backups = get_available_backups(Path(game_path))
-        if backups:
-            GoldButton(btn_frame, text=f"Rollback ({len(backups)} available)", command=lambda: self._show_rollback(manifest, backups), width=220, height=42, font_size=11).pack(side="left", padx=(0, 12))
-
-        GoldButton(btn_frame, text="\u2190 Back", command=self._show_welcome, width=100, height=36, font_size=10).pack(side="left")
-
-    def _show_update_check(self, manifest, api_key):
-        """Check Nexus for mod updates."""
-        self._clear_container()
-        frame = tk.Frame(self.container, bg=COLORS["bg"])
-        frame.pack(fill="both", expand=True, padx=30, pady=20)
-
-        self._make_label(frame, "Checking for Updates", size=22, color=COLORS["gold"], bold=True).pack(anchor="w", pady=(0, 6))
-
-        self._update_progress = ProgressBar(frame, width=700, height=24)
-        self._update_progress.pack(pady=(10, 10))
-
-        self._update_status = self._make_label(frame, "Preparing...", size=11, color=COLORS["text"])
-        self._update_status.pack(anchor="w", pady=(0, 10))
-
-        # Log area
-        log_frame = tk.Frame(frame, bg=COLORS["border"], bd=1, relief="flat")
-        log_frame.pack(fill="both", expand=True, pady=(0, 10))
-        self._update_log = tk.Text(log_frame, bg=COLORS["bg_light"], fg=COLORS["text_dim"], font=("Cascadia Code", 9), wrap="word", relief="flat", bd=0, highlightthickness=0)
-        self._update_log.pack(fill="both", expand=True, padx=4, pady=4)
-        self._update_log.tag_configure("gold", foreground=COLORS["gold"])
-        self._update_log.tag_configure("green", foreground=COLORS["green"])
-        self._update_log.tag_configure("red", foreground=COLORS["red"])
-        self._update_log.tag_configure("dim", foreground=COLORS["text_dim"])
-
-        def _ulog(text, tag=""):
-            def _do():
-                self._update_log.insert("end", text + "\n", tag)
-                self._update_log.see("end")
-            self.root.after(0, _do)
-
-        def _run():
-            import time
-            game_path = Path(self.game_path)
-            mods = manifest.get("mods", {})
-            updatable = {k: v for k, v in mods.items() if v.get("type") not in ("obse", "obse_framework", "ue4ss_framework")}
-            total = len(updatable)
-            updates = []
-
-            _ulog(f"Checking {total} mods against Nexus...", "gold")
-            _ulog("")
-
-            for idx, (nid_str, mod_info) in enumerate(updatable.items()):
-                nid = int(nid_str)
-                name = mod_info.get("name", f"Mod {nid}")
-                progress = (idx + 1) / total
-                self.root.after(0, lambda p=progress: self._update_progress.set_value(p))
-                self.root.after(0, lambda n=name, i=idx: self._update_status.config(text=f"[{i+1}/{total}] {n}"))
-
-                files = nexus_api_get_mod_files(nid, api_key)
-                if not files:
-                    _ulog(f"  {name}: could not reach Nexus", "red")
-                    time.sleep(0.5)
-                    continue
-
-                latest = nexus_api_get_latest_file(files)
-                if not latest:
-                    _ulog(f"  {name}: no files found on Nexus", "dim")
-                    time.sleep(0.5)
-                    continue
-
-                current_fid = mod_info.get("installed_file_id") or mod_info.get("nexus_file_id")
-                latest_fid = latest.get("file_id")
-
-                if current_fid != latest_fid:
-                    updates.append({
-                        "nid": nid,
-                        "name": name,
-                        "type": mod_info.get("type"),
-                        "current_file_id": current_fid,
-                        "current_version": mod_info.get("installed_version", "pinned"),
-                        "latest_file_id": latest_fid,
-                        "latest_version": latest.get("version", "new"),
-                        "latest_name": latest.get("file_name", ""),
-                    })
-                    _ulog(f"  {name}: update available ({latest.get('version', 'new')})", "gold")
-                else:
-                    _ulog(f"  {name}: up to date", "green")
-
-                time.sleep(0.3)  # Rate limit
-
-            _ulog("")
-            if updates:
-                _ulog(f"{len(updates)} update(s) available.", "gold")
-            else:
-                _ulog("All mods are up to date.", "green")
-
-            self.root.after(0, lambda: self._update_status.config(text=f"Done \u2014 {len(updates)} update(s) available"))
-
-            # Show buttons
-            def _show_btns():
-                btn_frame = tk.Frame(frame, bg=COLORS["bg"])
-                btn_frame.pack(fill="x", pady=(10, 0))
-                if updates:
-                    GoldButton(btn_frame, text="View Updates", command=lambda: self._show_update_list(manifest, updates, api_key), width=160, height=38, font_size=10).pack(side="left", padx=(0, 12))
-                GoldButton(btn_frame, text="\u2190 Back", command=lambda: self._show_updates(), width=100, height=36, font_size=10).pack(side="left")
-            self.root.after(0, _show_btns)
-
-        threading.Thread(target=_run, daemon=True).start()
-
-    def _show_update_list(self, manifest, updates, api_key):
-        """Show available updates with per-mod Update buttons."""
-        self._clear_container()
-        frame = tk.Frame(self.container, bg=COLORS["bg"])
-        frame.pack(fill="both", expand=True, padx=30, pady=20)
-
-        self._make_label(frame, f"{len(updates)} Update{'s' if len(updates) != 1 else ''} Available", size=22, color=COLORS["gold"], bold=True).pack(anchor="w", pady=(0, 6))
-        self._make_label(frame, "Update one at a time. Each mod is backed up first so you can rollback.", size=10, color=COLORS["text_dim"]).pack(anchor="w", pady=(0, 15))
-
-        # Scrollable list
-        list_frame = tk.Frame(frame, bg=COLORS["border"], bd=1, relief="flat")
-        list_frame.pack(fill="both", expand=True, pady=(0, 10))
-
-        canvas = tk.Canvas(list_frame, bg=COLORS["bg_light"], highlightthickness=0)
-        scrollbar = tk.Scrollbar(list_frame, orient="vertical", command=canvas.yview, bg=COLORS["scrollbar"], troughcolor=COLORS["scrollbar_bg"], width=10)
-        inner = tk.Frame(canvas, bg=COLORS["bg_light"])
-
-        inner.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.create_window((0, 0), window=inner, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-
-        scrollbar.pack(side="right", fill="y")
-        canvas.pack(side="left", fill="both", expand=True)
-
-        for upd in updates:
-            row = tk.Frame(inner, bg=COLORS["bg_light"], padx=10, pady=8)
-            row.pack(fill="x", padx=4, pady=2)
-
-            # Mod info
-            info = tk.Frame(row, bg=COLORS["bg_light"])
-            info.pack(side="left", fill="x", expand=True)
-
-            tk.Label(info, text=upd["name"], bg=COLORS["bg_light"], fg=COLORS["text"], font=("Segoe UI", 10, "bold")).pack(anchor="w")
-            tk.Label(info, text=f"{upd['current_version']}  \u2192  {upd['latest_version']}", bg=COLORS["bg_light"], fg=COLORS["text_dim"], font=("Segoe UI", 9)).pack(anchor="w")
-
-            # Update button
-            def _make_update_cmd(u=upd):
-                return lambda: self._run_single_update(manifest, u, api_key)
-
-            GoldButton(row, text="Update", command=_make_update_cmd(), width=90, height=30, font_size=9).pack(side="right", padx=(8, 0))
-
-        # Bottom buttons
-        btn_frame = tk.Frame(frame, bg=COLORS["bg"])
-        btn_frame.pack(fill="x")
-
-        if len(updates) > 1:
-            def _update_all():
-                self._run_batch_update(manifest, updates, api_key)
-            GoldButton(btn_frame, text="Update All", command=_update_all, width=140, height=38, font_size=10).pack(side="left", padx=(0, 12))
-
-        backups = get_available_backups(Path(self.game_path))
-        if backups:
-            GoldButton(btn_frame, text=f"Rollback ({len(backups)})", command=lambda: self._show_rollback(manifest, backups), width=160, height=38, font_size=10).pack(side="left", padx=(0, 12))
-
-        GoldButton(btn_frame, text="\u2190 Back", command=lambda: self._show_updates(), width=100, height=36, font_size=10).pack(side="left")
-
-    def _run_single_update(self, manifest, update_info, api_key):
-        """Update a single mod."""
-        self._clear_container()
-        frame = tk.Frame(self.container, bg=COLORS["bg"])
-        frame.pack(fill="both", expand=True, padx=30, pady=20)
-
-        name = update_info["name"]
-        self._make_label(frame, f"Updating {name}", size=22, color=COLORS["gold"], bold=True).pack(anchor="w", pady=(0, 6))
-
-        self._update_progress = ProgressBar(frame, width=700, height=24)
-        self._update_progress.pack(pady=(10, 10))
-
-        self._update_status = self._make_label(frame, "Preparing...", size=11, color=COLORS["text"])
-        self._update_status.pack(anchor="w", pady=(0, 10))
-
-        log_frame = tk.Frame(frame, bg=COLORS["border"], bd=1, relief="flat")
-        log_frame.pack(fill="both", expand=True, pady=(0, 10))
-        self._update_log = tk.Text(log_frame, bg=COLORS["bg_light"], fg=COLORS["text_dim"], font=("Cascadia Code", 9), wrap="word", relief="flat", bd=0, highlightthickness=0)
-        self._update_log.pack(fill="both", expand=True, padx=4, pady=4)
-        self._update_log.tag_configure("gold", foreground=COLORS["gold"])
-        self._update_log.tag_configure("green", foreground=COLORS["green"])
-        self._update_log.tag_configure("red", foreground=COLORS["red"])
-        self._update_log.tag_configure("dim", foreground=COLORS["text_dim"])
-
-        btn_frame = tk.Frame(frame, bg=COLORS["bg"])
-        btn_frame.pack(side="bottom", fill="x", pady=(10, 0))
-
-        def _ulog(text, tag=""):
-            def _do():
-                self._update_log.insert("end", text + "\n", tag)
-                self._update_log.see("end")
-            self.root.after(0, _do)
-
-        def _run():
-            game_path = Path(self.game_path)
-            nid = update_info["nid"]
-            nid_str = str(nid)
-            mod_entry = manifest["mods"].get(nid_str, {})
-            mod_type = mod_entry.get("type", update_info.get("type", "esp"))
-
-            try:
-                # Step 1: Backup
-                _ulog("Backing up current files...", "gold")
-                self.root.after(0, lambda: self._update_status.config(text="Creating backup..."))
-                self.root.after(0, lambda: self._update_progress.set_value(0.1))
-
-                if mod_entry.get("files"):
-                    backup_path = create_mod_backup(nid, mod_entry, game_path)
-                    _ulog(f"  Backed up {len(mod_entry.get('files', []))} files", "green")
-                else:
-                    _ulog("  No files to back up (first install?)", "dim")
-
-                # Step 2: Download
-                _ulog("Downloading new version...", "gold")
-                self.root.after(0, lambda: self._update_status.config(text="Downloading..."))
-                self.root.after(0, lambda: self._update_progress.set_value(0.2))
-
-                dl_url = nexus_api_get_download_url(nid, update_info["latest_file_id"], api_key)
-                if not dl_url:
-                    _ulog("  Failed to get download URL. Premium required?", "red")
-                    self.root.after(0, lambda: self._update_status.config(text="Download failed"))
-                    return
-
-                archive_name = update_info.get("latest_name", f"{nid}.zip")
-                archive_path = get_downloads_dir() / archive_name
-
-                def _progress(downloaded, total):
-                    if total > 0:
-                        pct = 0.2 + (downloaded / total) * 0.4
-                        self.root.after(0, lambda p=pct: self._update_progress.set_value(p))
-
-                ok = nexus_api_download_file(dl_url, archive_path, _progress)
-                if not ok:
-                    _ulog("  Download failed", "red")
-                    self.root.after(0, lambda: self._update_status.config(text="Download failed"))
-                    return
-
-                _ulog(f"  Downloaded {archive_name}", "green")
-
-                # Step 3: Extract to temp
-                _ulog("Extracting...", "gold")
-                self.root.after(0, lambda: self._update_status.config(text="Extracting..."))
-                self.root.after(0, lambda: self._update_progress.set_value(0.65))
-
-                tmp_dir = Path(tempfile.mkdtemp(prefix="chim_update_"))
-                ok = extract_archive(archive_path, tmp_dir)
-                if not ok:
-                    _ulog("  Extraction failed", "red")
-                    shutil.rmtree(tmp_dir, ignore_errors=True)
-                    return
-
-                # Step 4: Remove old files
-                _ulog("Removing old files...", "gold")
-                self.root.after(0, lambda: self._update_progress.set_value(0.7))
-                removed = 0
-                for rel_path in mod_entry.get("files", []):
-                    full_path = game_path / rel_path
-                    if full_path.is_file():
-                        full_path.unlink()
-                        removed += 1
-                _ulog(f"  Removed {removed} files", "dim")
-
-                # Step 5: Install new version
-                _ulog("Installing new version...", "gold")
-                self.root.after(0, lambda: self._update_status.config(text="Installing..."))
-                self.root.after(0, lambda: self._update_progress.set_value(0.8))
-
-                installed, errs, new_files = classify_and_install_files(
-                    tmp_dir, game_path, mod_type, name, extract_paks=True)
-                shutil.rmtree(tmp_dir, ignore_errors=True)
-
-                if installed > 0:
-                    _ulog(f"  Installed {installed} files", "green")
-                if errs:
-                    for e in errs:
-                        _ulog(f"  {e}", "red")
-
-                # Step 6: Update manifest
-                _ulog("Updating manifest...", "gold")
-                self.root.after(0, lambda: self._update_progress.set_value(0.9))
-
-                mod_entry["installed_file_id"] = update_info["latest_file_id"]
-                mod_entry["installed_version"] = update_info.get("latest_version", "unknown")
-                mod_entry["files"] = new_files
-                manifest["last_updated"] = datetime.now().isoformat()
-                save_manifest(game_path, manifest)
-
-                # Rebuild load order if ESP
-                if mod_type == "esp":
-                    try:
-                        build_load_order(
-                            [m for m in MODS if m.get("load_order") is not None],
-                            game_path
-                        )
-                        _ulog("  Load order rebuilt", "green")
-                    except Exception as e:
-                        _ulog(f"  Load order rebuild failed: {e}", "red")
-
-                self.root.after(0, lambda: self._update_progress.set_value(1.0))
-                _ulog("")
-                _ulog(f"\u2714 {name} updated to {update_info.get('latest_version', 'new version')}", "green")
-                self.root.after(0, lambda: self._update_status.config(text="Update complete"))
-
-            except Exception as e:
-                _ulog(f"Update failed: {e}", "red")
-                import traceback
-                _ulog(traceback.format_exc(), "red")
-                self.root.after(0, lambda: self._update_status.config(text="Update failed"))
-
-            # Show buttons
-            def _show_btns():
-                GoldButton(btn_frame, text="\u2190 Back to Manage Mods", command=self._show_updates, width=220, height=38, font_size=10).pack(side="left")
-            self.root.after(0, _show_btns)
-
-        threading.Thread(target=_run, daemon=True).start()
-
-    def _run_batch_update(self, manifest, updates, api_key):
-        """Update all mods sequentially."""
-        # For now, just process them one at a time via _run_single_update
-        # A proper batch UI would show aggregate progress
-        # For V2, just do the first one and let user come back for more
-        if updates:
-            self._run_single_update(manifest, updates[0], api_key)
-
-    def _show_rollback(self, manifest, backups):
-        """Show rollback options."""
-        self._clear_container()
-        frame = tk.Frame(self.container, bg=COLORS["bg"])
-        frame.pack(fill="both", expand=True, padx=30, pady=20)
-
-        self._make_label(frame, "Rollback a Mod", size=22, color=COLORS["gold"], bold=True).pack(anchor="w", pady=(0, 6))
-        self._make_label(frame, "Restore a mod to its previous version from backup.", size=10, color=COLORS["text_dim"]).pack(anchor="w", pady=(0, 15))
-
-        for nid, info in backups.items():
-            row = tk.Frame(frame, bg=COLORS["bg_light"], padx=12, pady=10, highlightbackground=COLORS["border"], highlightthickness=1)
-            row.pack(fill="x", pady=(0, 8))
-
-            info_frame = tk.Frame(row, bg=COLORS["bg_light"])
-            info_frame.pack(side="left", fill="x", expand=True)
-
-            tk.Label(info_frame, text=info["name"], bg=COLORS["bg_light"], fg=COLORS["text"], font=("Segoe UI", 10, "bold")).pack(anchor="w")
-            tk.Label(info_frame, text=f"Backup version: {info['version']}", bg=COLORS["bg_light"], fg=COLORS["text_dim"], font=("Segoe UI", 9)).pack(anchor="w")
-
-            def _make_rollback_cmd(n=nid):
-                return lambda: self._do_rollback(manifest, n)
-
-            GoldButton(row, text="Rollback", command=_make_rollback_cmd(), width=100, height=30, font_size=9).pack(side="right")
-
-        GoldButton(frame, text="\u2190 Back", command=self._show_updates, width=100, height=36, font_size=10).pack(anchor="w", pady=(10, 0))
-
-    def _do_rollback(self, manifest, nid):
-        """Execute rollback for a single mod."""
-        game_path = Path(self.game_path)
-        ok, msg = rollback_mod(nid, game_path, manifest)
-        if ok:
-            messagebox.showinfo("Rollback Complete", msg)
-        else:
-            messagebox.showerror("Rollback Failed", msg)
-        # Refresh
-        self._show_updates()
 
     # ─── Run ───────────────────────────────────────────────────────────────
 
