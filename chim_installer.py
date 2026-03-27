@@ -1250,7 +1250,8 @@ def classify_and_install_files(
                 shutil.copy2(f, dest)
                 installed += 1
 
-    if installed == 0:
+    if installed == 0 and mod_type != "pak":
+        # PAK mods may have 0 installed files because PAKs are deployed from patches/
         errors.append(f"No recognized files found in archive for {mod_name}")
 
     return installed, errors
@@ -1927,7 +1928,7 @@ class CHIMInstaller:
 
         self._nexus_btn = GoldButton(
             btn_frame, text="Download Next Mod", command=self._open_next_nexus,
-            width=200, height=38, font_size=10,
+            width=280, height=38, font_size=10,
         )
         self._nexus_btn.pack(side="right", padx=(0, 10))
 
@@ -1976,7 +1977,7 @@ class CHIMInstaller:
         # Update button text
         if self.current_mod_index < len(self.active_mods):
             mod = self.active_mods[self.current_mod_index]
-            short_name = mod["name"][:25]
+            short_name = mod["name"] if len(mod["name"]) <= 30 else mod["name"][:27] + "..."
             self._nexus_btn.set_text(f"Download: {short_name}")
             self._nexus_btn.set_enabled(True)
             self._skip_btn.set_enabled(True)
@@ -2360,38 +2361,45 @@ class CHIMInstaller:
             all_files = [f for f in tmp_dir.rglob("*") if f.is_file()]
             extensions = set(f.suffix.lower() for f in all_files)
 
-            expected_map = {
-                "esp": {".esp", ".esm", ".bsa", ".ini"},
-                "pak": {".pak", ".ucas", ".utoc", ".esp", ".esm"},
-                "obse": {".dll", ".ini", ".esp", ".esm", ".bin", ".pdb"},
-                "obse_framework": {".dll", ".exe", ".ini"},
-                "ue4ss": {".lua", ".txt", ".ini", ".dll", ".json", ".pak", ".ucas", ".utoc", ".esp", ".esm"},
-                "ue4ss_framework": {".dll", ".ini", ".txt", ".lua", ".exe"},
-                "config": {".ini", ".txt", ".cfg", ".json"},
-                "obse_config": {".json", ".ini", ".cfg", ".txt", ".xml"},
-            }
-            expected = expected_map.get(mod["type"], set())
-            relevant = extensions & expected
-
-            if not relevant and len(all_files) > 0:
-                self._vlog(f"  [{idx+1}/{total}] {mod['name']}: no expected files found (has: {', '.join(extensions)})", "red")
-                issues.append(f"{mod['name']}: archive doesn't contain expected file types for {mod['type']} mod")
+            # PAK mods: PAK files are deployed from patches/, so we only need
+            # ESPs/JSONs from the archive. If it only has PAKs, that's fine.
+            if mod["type"] == "pak":
+                has_paks = bool(extensions & {".pak", ".ucas", ".utoc"})
+                has_extras = bool(extensions & {".esp", ".esm", ".json"})
+                if has_paks or has_extras:
+                    self._vlog(f"  [{idx+1}/{total}] {mod['name']}: OK ({len(all_files)} files, PAKs bundled)", "green")
+                else:
+                    self._vlog(f"  [{idx+1}/{total}] {mod['name']}: OK (PAKs deployed from bundle)", "green")
             else:
-                # Check for file conflicts (skip known shared framework files)
-                shared_files = {"ue4ss.dll", "dwmapi.dll", "xinput1_3.dll", "ue4ss-settings.ini"}
-                for f in all_files:
-                    ext = f.suffix.lower()
-                    if ext in (".esp", ".esm", ".pak", ".ucas", ".utoc", ".dll"):
-                        key = f.name.lower()
-                        if key in shared_files:
-                            continue
-                        if key in dest_files and dest_files[key] != mod['name']:
-                            self._vlog(f"  [{idx+1}/{total}] {mod['name']}: conflict — {f.name} also in {dest_files[key]}", "red")
-                            warnings.append(f"File conflict: {f.name} exists in both {mod['name']} and {dest_files[key]}")
-                        else:
-                            dest_files[key] = mod['name']
+                expected_map = {
+                    "esp": {".esp", ".esm", ".bsa", ".ini"},
+                    "obse": {".dll", ".ini", ".esp", ".esm", ".bin", ".pdb"},
+                    "ue4ss": {".lua", ".txt", ".ini", ".dll", ".json", ".pak", ".ucas", ".utoc", ".esp", ".esm"},
+                    "config": {".ini", ".txt", ".cfg", ".json"},
+                    "obse_config": {".json", ".ini", ".cfg", ".txt", ".xml"},
+                }
+                expected = expected_map.get(mod["type"], set())
+                relevant = extensions & expected
 
-                self._vlog(f"  [{idx+1}/{total}] {mod['name']}: OK ({len(all_files)} files)", "green")
+                if not relevant and len(all_files) > 0:
+                    self._vlog(f"  [{idx+1}/{total}] {mod['name']}: no expected files found (has: {', '.join(extensions)})", "red")
+                    issues.append(f"{mod['name']}: archive doesn't contain expected file types for {mod['type']} mod")
+                else:
+                    # Check for file conflicts (skip known shared framework files)
+                    shared_files = {"ue4ss.dll", "dwmapi.dll", "xinput1_3.dll", "ue4ss-settings.ini"}
+                    for f in all_files:
+                        ext = f.suffix.lower()
+                        if ext in (".esp", ".esm", ".pak", ".ucas", ".utoc", ".dll"):
+                            key = f.name.lower()
+                            if key in shared_files:
+                                continue
+                            if key in dest_files and dest_files[key] != mod['name']:
+                                self._vlog(f"  [{idx+1}/{total}] {mod['name']}: conflict — {f.name} also in {dest_files[key]}", "red")
+                                warnings.append(f"File conflict: {f.name} exists in both {mod['name']} and {dest_files[key]}")
+                            else:
+                                dest_files[key] = mod['name']
+
+                    self._vlog(f"  [{idx+1}/{total}] {mod['name']}: OK ({len(all_files)} files)", "green")
 
             shutil.rmtree(tmp_dir, ignore_errors=True)
             time.sleep(0.05)  # brief pause for UI updates
